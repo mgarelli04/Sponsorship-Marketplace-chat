@@ -1,0 +1,1 @@
+//Aqui van todas las consultas a la base de datos relacionadas con el usuario
