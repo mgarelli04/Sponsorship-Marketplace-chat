@@ -5,7 +5,9 @@ import { usePathname } from "next/navigation";
 export default function SiteHeader() {
   const pathname = usePathname();
 
-  if (pathname === "/login") {
+  // Hide header on login and auth routes
+  const hideHeaderRoutes = ["/login", "/creator/login", "/sponsor/login"];
+  if (hideHeaderRoutes.includes(pathname)) {
     return null;
   }
 

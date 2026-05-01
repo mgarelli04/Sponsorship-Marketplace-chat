@@ -13,7 +13,7 @@ export default function Home() {
 
         <div className="relative z-10 flex min-h-[30vh] flex-col justify-between md:min-h-[calc(100vh-7rem)]">
           <div>
-            <a className="inline-flex items-center gap-3" href="#" aria-label="SponsorHub home">
+            <a className="inline-flex items-center gap-3" href="/" aria-label="SponsorHub home">
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f79009] text-sm font-bold lowercase text-white">
                 s
               </span>
@@ -52,7 +52,7 @@ export default function Home() {
 
           <div className="mt-8 space-y-4">
             <a
-              href="#"
+              href="/creator/login"
               className="flex items-start gap-4 rounded-2xl border border-[#d9e0eb] bg-white px-5 py-4 transition hover:border-[#c5cfdf] hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)]"
             >
               <span
@@ -72,7 +72,7 @@ export default function Home() {
             </a>
 
             <a
-              href="#"
+              href="/sponsor/login"
               className="flex items-start gap-4 rounded-2xl border border-[#d9e0eb] bg-white px-5 py-4 transition hover:border-[#c5cfdf] hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)]"
             >
               <span
