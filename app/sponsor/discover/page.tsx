@@ -2,518 +2,542 @@
 
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  ArrowUpDown,
+  Grid3X3,
+  Heart,
+  List,
+  MapPin,
+  Search,
+  Shield,
+  SlidersHorizontal,
+  Star,
+  Users,
+  X,
+} from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import {
+  type AudienceType,
+  type MarketplaceCreator,
+  marketplaceCategories,
+  marketplaceCreators,
+  suggestedSponsorSearches,
+} from "@/src/data/sponsor-marketplace";
 
-type AudienceType = "B2C" | "B2B";
+const STORAGE_KEY = "sponsorSavedCreators";
+const EMPTY_SAVED_CREATORS: string[] = [];
+let cachedSavedRaw: string | null = null;
+let cachedSavedCreators: string[] = EMPTY_SAVED_CREATORS;
 
-type CreatorCard = {
-  id: string;
-  icon: string;
-  name: string;
-  location: string;
-  category: string;
-  attendees: number;
-  matchScore: number;
-  tags: string[];
-  budgetFrom: number;
-  verified: boolean;
-  audienceTypes: AudienceType[];
-};
-
-const CREATORS: CreatorCard[] = [
-  {
-    id: "neon-nights-festival",
-    icon: "🎵",
-    name: "Neon Nights Festival",
-    location: "Los Angeles, CA",
-    category: "Music Festival",
-    attendees: 15000,
-    matchScore: 94,
-    tags: ["Electronic Music", "Nightlife", "Fashion"],
-    budgetFrom: 5000,
-    verified: true,
-    audienceTypes: ["B2C"],
-  },
-  {
-    id: "techforward-summit",
-    icon: "💻",
-    name: "TechForward Summit",
-    location: "Austin, TX",
-    category: "Tech Conference",
-    attendees: 3200,
-    matchScore: 87,
-    tags: ["SaaS", "AI/ML", "Venture Capital"],
-    budgetFrom: 3000,
-    verified: true,
-    audienceTypes: ["B2B"],
-  },
-  {
-    id: "educonnect-global",
-    icon: "📊",
-    name: "EduConnect Global",
-    location: "Madrid, Spain",
-    category: "Education",
-    attendees: 2000,
-    matchScore: 76,
-    tags: ["EdTech", "K-12", "Higher Ed"],
-    budgetFrom: 2500,
-    verified: true,
-    audienceTypes: ["B2B", "B2C"],
-  },
-  {
-    id: "street-flavor-expo",
-    icon: "🍔",
-    name: "Street Flavor Expo",
-    location: "Barcelona, Spain",
-    category: "Food & Culture",
-    attendees: 4200,
-    matchScore: 72,
-    tags: ["Food Trucks", "Family", "Lifestyle"],
-    budgetFrom: 2800,
-    verified: false,
-    audienceTypes: ["B2C"],
-  },
-  {
-    id: "wellness-live-summit",
-    icon: "🧘",
-    name: "Wellness Live Summit",
-    location: "Miami, FL",
-    category: "Health & Wellness",
-    attendees: 1800,
-    matchScore: 68,
-    tags: ["Fitness", "Supplements", "Mindfulness"],
-    budgetFrom: 2200,
-    verified: false,
-    audienceTypes: ["B2C", "B2B"],
-  },
-];
-
-const SUGGESTED_SEARCHES = [
-  "Music festivals in California with 2000+ attendees",
-  "Tech conferences in Austin targeting Gen Z",
-  "Education events in Madrid with verified audience data",
-];
-
-const CATEGORIES = [
-  "All",
-  "Music Festival",
-  "Tech Conference",
-  "Education",
-  "Food & Culture",
-  "Health & Wellness",
-] as const;
-
-const AUDIENCE_SIZE_OPTIONS = ["Any size", "Under 2K", "2K - 5K", "5K+"] as const;
-const BUDGET_OPTIONS = ["Any budget", "Under $3K", "$3K - $5K", "$5K+"] as const;
+const AUDIENCE_SIZE_OPTIONS = ["Any size", "1,000+", "5,000+", "10,000+"] as const;
+const BUDGET_OPTIONS = ["Any budget", "Under $5K", "$5K - $15K", "$15K - $35K", "$35K+"] as const;
+const SORT_OPTIONS = ["Most Relevant", "Highest Audience", "Lowest CPM", "Recently Updated"] as const;
 
 type AudienceSizeOption = (typeof AUDIENCE_SIZE_OPTIONS)[number];
 type BudgetOption = (typeof BUDGET_OPTIONS)[number];
-type SortOption = "Most Relevant" | "Highest Match" | "Audience Size" | "Lowest Budget";
+type SortOption = (typeof SORT_OPTIONS)[number];
+
+function readSavedCreators() {
+  if (typeof window === "undefined") {
+    return EMPTY_SAVED_CREATORS;
+  }
+
+  try {
+    const rawSaved = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!rawSaved) {
+      cachedSavedRaw = null;
+      cachedSavedCreators = EMPTY_SAVED_CREATORS;
+      return cachedSavedCreators;
+    }
+
+    if (rawSaved === cachedSavedRaw) {
+      return cachedSavedCreators;
+    }
+
+    cachedSavedRaw = rawSaved;
+    cachedSavedCreators = JSON.parse(rawSaved) as string[];
+    return cachedSavedCreators;
+  } catch {
+    cachedSavedRaw = null;
+    cachedSavedCreators = EMPTY_SAVED_CREATORS;
+    return cachedSavedCreators;
+  }
+}
+
+function subscribeToSavedCreators(callback: () => void) {
+  if (typeof window === "undefined") {
+    return () => {};
+  }
+
+  window.addEventListener("storage", callback);
+  window.addEventListener("sponsor-saved-updated", callback);
+
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("sponsor-saved-updated", callback);
+  };
+}
+
+function writeSavedCreators(ids: string[]) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    window.dispatchEvent(new Event("sponsor-saved-updated"));
+  } catch {
+    // Storage can be unavailable in private browsing contexts.
+  }
+}
+
+function firstPackage(creator: MarketplaceCreator) {
+  return creator.packages[0];
+}
+
+function bestCpm(creator: MarketplaceCreator) {
+  return Math.min(...creator.packages.map((item) => item.cpm));
+}
 
 export default function SponsorDiscover() {
   const { data: session, status } = useSession();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<(typeof CATEGORIES)[number]>("All");
+  const savedCreatorIds = useSyncExternalStore(
+    subscribeToSavedCreators,
+    readSavedCreators,
+    () => EMPTY_SAVED_CREATORS,
+  );
+  const [query, setQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState<(typeof marketplaceCategories)[number]>("All");
   const [audienceSize, setAudienceSize] = useState<AudienceSizeOption>("Any size");
   const [budgetRange, setBudgetRange] = useState<BudgetOption>("Any budget");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [selectedAudienceTypes, setSelectedAudienceTypes] = useState<AudienceType[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("Most Relevant");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    try {
-      const rawSaved = localStorage.getItem("sponsorSavedCreators");
-      const parsed = rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
-      setSavedCreatorIds(parsed);
-    } catch {
-      setSavedCreatorIds([]);
-    }
-  }, []);
+  const filteredCreators = useMemo(() => {
+    const results = marketplaceCreators.filter((creator) => {
+      const matchesCategory = selectedCategory === "All" || creator.category === selectedCategory;
+      const matchesVerified = !verifiedOnly || creator.verified;
+      const matchesAudienceType =
+        selectedAudienceTypes.length === 0 ||
+        selectedAudienceTypes.some((type) => creator.audienceTypes.includes(type));
+      const matchesAudienceSize =
+        audienceSize === "Any size" ||
+        (audienceSize === "1,000+" && creator.audienceSize >= 1000) ||
+        (audienceSize === "5,000+" && creator.audienceSize >= 5000) ||
+        (audienceSize === "10,000+" && creator.audienceSize >= 10000);
+      const price = firstPackage(creator).price;
+      const matchesBudget =
+        budgetRange === "Any budget" ||
+        (budgetRange === "Under $5K" && price < 5000) ||
+        (budgetRange === "$5K - $15K" && price >= 5000 && price <= 15000) ||
+        (budgetRange === "$15K - $35K" && price >= 15000 && price <= 35000) ||
+        (budgetRange === "$35K+" && price > 35000);
+
+      return (
+        matchesCategory &&
+        matchesVerified &&
+        matchesAudienceType &&
+        matchesAudienceSize &&
+        matchesBudget
+      );
+    });
+
+    return results.sort((a, b) => {
+      if (sortBy === "Highest Audience") {
+        return b.audienceSize - a.audienceSize;
+      }
+
+      if (sortBy === "Lowest CPM") {
+        return bestCpm(a) - bestCpm(b);
+      }
+
+      if (sortBy === "Recently Updated") {
+        return b.lastUpdated.localeCompare(a.lastUpdated);
+      }
+
+      return b.matchScore - a.matchScore;
+    });
+  }, [audienceSize, budgetRange, selectedAudienceTypes, selectedCategory, sortBy, verifiedOnly]);
 
   const toggleAudienceType = (type: AudienceType) => {
-    setSelectedAudienceTypes((prev) =>
-      prev.includes(type) ? prev.filter((item) => item !== type) : [...prev, type],
+    setSelectedAudienceTypes((previous) =>
+      previous.includes(type) ? previous.filter((item) => item !== type) : [...previous, type],
     );
   };
 
-  const toggleSavedCreator = (creatorId: string) => {
+  const toggleSave = (creatorId: string) => {
     const nextSaved = savedCreatorIds.includes(creatorId)
       ? savedCreatorIds.filter((id) => id !== creatorId)
       : [...savedCreatorIds, creatorId];
 
-    setSavedCreatorIds(nextSaved);
-
-    try {
-      localStorage.setItem("sponsorSavedCreators", JSON.stringify(nextSaved));
-      window.dispatchEvent(new Event("sponsor-saved-updated"));
-    } catch {
-      // no-op if storage is unavailable
-    }
+    writeSavedCreators(nextSaved);
   };
 
   const resetFilters = () => {
+    setQuery("");
     setSelectedCategory("All");
     setAudienceSize("Any size");
     setBudgetRange("Any budget");
     setVerifiedOnly(false);
     setSelectedAudienceTypes([]);
-    setSearchQuery("");
-    setSortBy("Most Relevant");
   };
-
-  const filteredCreators = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    const results = CREATORS.filter((creator) => {
-      const matchesCategory =
-        selectedCategory === "All" || creator.category === selectedCategory;
-
-      const matchesAudienceSize =
-        audienceSize === "Any size" ||
-        (audienceSize === "Under 2K" && creator.attendees < 2000) ||
-        (audienceSize === "2K - 5K" && creator.attendees >= 2000 && creator.attendees <= 5000) ||
-        (audienceSize === "5K+" && creator.attendees > 5000);
-
-      const matchesBudget =
-        budgetRange === "Any budget" ||
-        (budgetRange === "Under $3K" && creator.budgetFrom < 3000) ||
-        (budgetRange === "$3K - $5K" && creator.budgetFrom >= 3000 && creator.budgetFrom <= 5000) ||
-        (budgetRange === "$5K+" && creator.budgetFrom > 5000);
-
-      const matchesVerified = !verifiedOnly || creator.verified;
-
-      const matchesAudienceType =
-        selectedAudienceTypes.length === 0 ||
-        selectedAudienceTypes.some((type) => creator.audienceTypes.includes(type));
-
-      const haystack = [
-        creator.name,
-        creator.location,
-        creator.category,
-        ...creator.tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      const matchesSearch = normalizedQuery.length === 0 || haystack.includes(normalizedQuery);
-
-      return (
-        matchesCategory &&
-        matchesAudienceSize &&
-        matchesBudget &&
-        matchesVerified &&
-        matchesAudienceType &&
-        matchesSearch
-      );
-    });
-
-    return results.sort((a, b) => {
-      if (sortBy === "Audience Size") {
-        return b.attendees - a.attendees;
-      }
-
-      if (sortBy === "Lowest Budget") {
-        return a.budgetFrom - b.budgetFrom;
-      }
-
-      if (sortBy === "Highest Match" || sortBy === "Most Relevant") {
-        return b.matchScore - a.matchScore;
-      }
-
-      return 0;
-    });
-  }, [
-    searchQuery,
-    selectedCategory,
-    audienceSize,
-    budgetRange,
-    verifiedOnly,
-    selectedAudienceTypes,
-    sortBy,
-  ]);
-
-  const recommendedCreators = filteredCreators.slice(0, 3);
 
   if (status === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f5f6f8]">
-        <p className="text-[#6b7e9e]">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
+        <p className="text-sm text-[#64748b]">Loading...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f6f9] text-[#1f2a44]">
-      <div className="mx-auto w-full max-w-305 px-4 py-7 sm:px-6">
-        <div className="mb-3 flex items-center rounded-xl border border-[#dfe5ee] bg-white px-4 py-3 shadow-[0_2px_8px_rgba(18,31,57,0.03)]">
-          <span className="mr-3 text-[#94a2b8]">🔍</span>
-          <input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search creators, events, categories, locations..."
-            className="w-full bg-transparent text-sm text-[#223151] placeholder:text-[#7f8ba2] focus:outline-none"
-          />
-        </div>
-
-        <div className="mb-6 flex flex-wrap gap-2">
-          {SUGGESTED_SEARCHES.map((chip) => (
-            <button
-              type="button"
-              key={chip}
-              onClick={() => setSearchQuery(chip)}
-              className="rounded-full bg-[#eef2f7] px-3 py-1 text-xs font-medium text-[#60708a] transition hover:bg-[#e4ebf4]"
-            >
-              {chip}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid gap-5 lg:grid-cols-[230px_1fr]">
-          <aside className="h-fit rounded-2xl border border-[#dde4ee] bg-white p-4 shadow-[0_2px_10px_rgba(23,34,56,0.04)]">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-[20px] font-semibold text-[#2a3650]">Filters</h2>
-              <button onClick={resetFilters} className="text-lg text-[#6f7f99]" aria-label="Reset filters">
-                ×
+    <main className="min-h-screen bg-[#f7f9fc] text-[#0f172a]">
+      <div className="mx-auto w-full max-w-[1260px] px-4 py-7">
+        <section className="mb-5">
+          <div className="relative mb-3">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#8ba0bc]" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search creators, events, categories, locations..."
+              className="h-12 w-full rounded-lg border border-[#d9e2ef] bg-white pl-12 pr-4 text-sm text-[#24324b] shadow-[0_2px_8px_rgba(15,23,42,0.07)] outline-none placeholder:text-[#64748b]"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {suggestedSponsorSearches.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => setQuery(example)}
+                className="rounded-full bg-[#edf2f7] px-3 py-1 text-[11px] font-medium text-[#526984] transition hover:bg-[#e5ecf5]"
+              >
+                {example}
               </button>
-            </div>
+            ))}
+          </div>
+        </section>
 
-            <div className="mb-6">
-              <p className="mb-3 text-sm font-semibold text-[#384661]">Category</p>
-              <div className="space-y-2 text-[15px]">
-                {CATEGORIES.map((category) => {
-                  const isActive = selectedCategory === category;
+        <div className="flex gap-6">
+          {showFilters ? (
+            <aside className="hidden w-[255px] shrink-0 lg:block">
+              <div className="rounded-lg border border-[#d9e2ef] bg-white p-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
+                <div className="mb-6 flex items-center justify-between">
+                  <h2 className="text-sm font-bold text-[#111827]">Filters</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(false)}
+                    className="rounded-md p-1 text-[#0f172a] hover:bg-[#f1f5f9]"
+                    aria-label="Hide filters"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
 
-                  return (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => setSelectedCategory(category)}
-                      className={
-                        isActive
-                          ? "block w-full rounded-xl bg-[#fff2dd] px-3 py-2 text-left font-semibold text-[#f79009]"
-                          : "block w-full rounded-xl px-3 py-2 text-left text-[#6a7990] transition hover:bg-[#f3f6fa]"
-                      }
-                    >
-                      {category}
-                    </button>
-                  );
-                })}
+                <FilterBlock title="Category">
+                  <div className="space-y-1.5">
+                    {marketplaceCategories.map((category) => (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => setSelectedCategory(category)}
+                        className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                          selectedCategory === category
+                            ? "bg-[#fff2dd] font-medium text-[#f79009]"
+                            : "text-[#526984] hover:bg-[#f3f6fa]"
+                        }`}
+                      >
+                        {category}
+                      </button>
+                    ))}
+                  </div>
+                </FilterBlock>
+
+                <FilterBlock title="Audience Size">
+                  <select
+                    value={audienceSize}
+                    onChange={(event) => setAudienceSize(event.target.value as AudienceSizeOption)}
+                    className="h-9 w-full rounded-lg border border-[#d6dfeb] bg-white px-3 text-sm text-[#0f172a] outline-none"
+                  >
+                    {AUDIENCE_SIZE_OPTIONS.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </FilterBlock>
+
+                <FilterBlock title="Budget Range">
+                  <select
+                    value={budgetRange}
+                    onChange={(event) => setBudgetRange(event.target.value as BudgetOption)}
+                    className="h-9 w-full rounded-lg border border-[#d6dfeb] bg-white px-3 text-sm text-[#0f172a] outline-none"
+                  >
+                    {BUDGET_OPTIONS.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </FilterBlock>
+
+                <label className="mb-5 flex items-center gap-2 text-sm text-[#0f172a]">
+                  <input
+                    type="checkbox"
+                    checked={verifiedOnly}
+                    onChange={(event) => setVerifiedOnly(event.target.checked)}
+                    className="h-4 w-4 rounded border-[#94a3b8] accent-[#f79009]"
+                  />
+                  <Shield className="h-3.5 w-3.5 text-[#10b981]" />
+                  Verified only
+                </label>
+
+                <FilterBlock title="Audience Type">
+                  <div className="flex gap-2">
+                    {(["B2C", "B2B"] as const).map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => toggleAudienceType(type)}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold ${
+                          selectedAudienceTypes.includes(type)
+                            ? "border-[#f0c27a] bg-[#fff2dd] text-[#c67800]"
+                            : "border-[#d9e2ef] bg-white text-[#334155]"
+                        }`}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </FilterBlock>
               </div>
-            </div>
+            </aside>
+          ) : null}
 
-            <div className="mb-5">
-              <p className="mb-2 text-sm font-semibold text-[#384661]">Audience Size</p>
-              <select
-                value={audienceSize}
-                onChange={(event) => setAudienceSize(event.target.value as AudienceSizeOption)}
-                className="w-full rounded-xl border border-[#dce3ed] bg-white px-3 py-2 text-sm text-[#60708a] focus:border-[#c7d0dd] focus:outline-none"
-              >
-                {AUDIENCE_SIZE_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-5">
-              <p className="mb-2 text-sm font-semibold text-[#384661]">Budget Range</p>
-              <select
-                value={budgetRange}
-                onChange={(event) => setBudgetRange(event.target.value as BudgetOption)}
-                className="w-full rounded-xl border border-[#dce3ed] bg-white px-3 py-2 text-sm text-[#60708a] focus:border-[#c7d0dd] focus:outline-none"
-              >
-                {BUDGET_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <label className="mb-5 flex cursor-pointer items-center gap-2 text-sm text-[#50607b]">
-              <input
-                type="checkbox"
-                checked={verifiedOnly}
-                onChange={(event) => setVerifiedOnly(event.target.checked)}
-                className="h-4 w-4 rounded border border-[#7b8aa4]"
-              />
-              <span>Verified only</span>
-            </label>
-
-            <div>
-              <p className="mb-2 text-sm font-semibold text-[#384661]">Audience Type</p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => toggleAudienceType("B2C")}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    selectedAudienceTypes.includes("B2C")
-                      ? "border-[#f0c27a] bg-[#fff2dd] text-[#c67800]"
-                      : "border-[#d6deea] text-[#556582] hover:bg-[#f5f8fc]"
-                  }`}
-                >
-                  B2C
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleAudienceType("B2B")}
-                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                    selectedAudienceTypes.includes("B2B")
-                      ? "border-[#f0c27a] bg-[#fff2dd] text-[#c67800]"
-                      : "border-[#d6deea] text-[#556582] hover:bg-[#f5f8fc]"
-                  }`}
-                >
-                  B2B
-                </button>
-              </div>
-            </div>
-          </aside>
-
-          <section>
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xl font-semibold text-[#3a4862]">{filteredCreators.length} creators found</p>
+          <section className="min-w-0 flex-1">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-sm text-[#526984]">{filteredCreators.length} creators found</p>
               <div className="flex items-center gap-2">
-                <select
-                  value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value as SortOption)}
-                  className="h-9 rounded-xl border border-[#dce3ec] bg-white px-3 text-sm font-medium text-[#4f607c] focus:outline-none"
-                >
-                  <option value="Most Relevant">Most Relevant</option>
-                  <option value="Highest Match">Highest Match</option>
-                  <option value="Audience Size">Audience Size</option>
-                  <option value="Lowest Budget">Lowest Budget</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border text-[#687892] ${
-                    viewMode === "grid"
-                      ? "border-[#f0c27a] bg-[#fff2dd]"
-                      : "border-[#dce3ec] bg-white"
-                  }`}
-                >
-                  ▦
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border text-[#687892] ${
-                    viewMode === "list"
-                      ? "border-[#f0c27a] bg-[#fff2dd]"
-                      : "border-[#dce3ec] bg-white"
-                  }`}
-                >
-                  ☰
-                </button>
+                {!showFilters ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(true)}
+                    className="hidden h-8 items-center gap-1 rounded-lg border border-[#d9e2ef] bg-white px-3 text-xs text-[#334155] lg:flex"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filters
+                  </button>
+                ) : null}
+                <label className="relative">
+                  <ArrowUpDown className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#334155]" />
+                  <select
+                    value={sortBy}
+                    onChange={(event) => setSortBy(event.target.value as SortOption)}
+                    className="h-8 w-32 rounded-lg border border-[#d9e2ef] bg-white pl-8 pr-2 text-xs text-[#0f172a] outline-none"
+                    aria-label="Sort creators"
+                  >
+                    {SORT_OPTIONS.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="flex h-8 overflow-hidden rounded-lg border border-[#d9e2ef] bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("grid")}
+                    className={`grid w-8 place-items-center ${viewMode === "grid" ? "bg-[#edf2f7]" : ""}`}
+                    aria-label="Grid view"
+                  >
+                    <Grid3X3 className="h-4 w-4 text-[#334155]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode("list")}
+                    className={`grid w-8 place-items-center ${viewMode === "list" ? "bg-[#edf2f7]" : ""}`}
+                    aria-label="List view"
+                  >
+                    <List className="h-4 w-4 text-[#334155]" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="mb-2 flex items-center gap-2 text-base font-semibold text-[#2d3a55]">
-              <span className="text-[#f7a31a]">☆</span>
-              <span>Recommended for you</span>
-            </div>
+            <section className="mb-6">
+              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0f172a]">
+                <Star className="h-4 w-4 text-[#f79009]" />
+                Recommended for you
+              </h3>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {marketplaceCreators.slice(0, 3).map((creator) => (
+                  <Link
+                    key={creator.id}
+                    href={`/sponsor/discover?creator=${creator.id}`}
+                    className="w-[190px] shrink-0 rounded-lg border border-[#d9e2ef] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                  >
+                    <div className="mb-2 text-2xl">{creator.logo}</div>
+                    <p className="truncate text-sm font-bold text-[#0f172a]">{creator.name}</p>
+                    <p className="text-xs text-[#64748b]">{creator.location}</p>
+                    <Match score={creator.matchScore} className="mt-3" />
+                  </Link>
+                ))}
+              </div>
+            </section>
 
-            <div className="mb-5 grid gap-3 md:grid-cols-3">
-              {recommendedCreators.map((item) => (
-                <article
-                  key={item.name}
-                  className="rounded-2xl border border-[#dbe3ed] bg-white p-4 shadow-[0_2px_8px_rgba(20,33,60,0.04)]"
-                >
-                  <div className="mb-2 text-2xl">{item.icon}</div>
-                  <p className="text-lg font-semibold text-[#293652]">{item.name}</p>
-                  <p className="mb-3 text-sm text-[#6f809a]">{item.location}</p>
-                  <span className="inline-flex rounded-full bg-[#fff2dd] px-3 py-1 text-xs font-semibold text-[#cf7f00]">
-                    {item.matchScore}% match
-                  </span>
-                </article>
-              ))}
-            </div>
-
-            <div
-              className={`grid gap-4 ${
-                viewMode === "grid" ? "md:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"
-              }`}
-            >
-              {filteredCreators.map((card) => (
-                <article
-                  key={card.name}
-                  className="overflow-hidden rounded-2xl border border-[#d8e0eb] bg-white shadow-[0_2px_10px_rgba(20,33,61,0.05)]"
-                >
-                  <div className="relative h-21.5 bg-linear-to-r from-[#0f1b3f] to-[#13275b] px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleSavedCreator(card.id)}
-                      className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/85 text-[#7a869f]"
-                    >
-                      {savedCreatorIds.includes(card.id) ? "♥" : "♡"}
-                    </button>
-                  </div>
-
-                  <div className="relative p-4">
-                    <div className="absolute -top-5 left-4 inline-flex h-10 w-10 items-center justify-center rounded-xl border border-[#dfe5ee] bg-white text-xl shadow-sm">
-                      {card.icon}
-                    </div>
-
-                    <div className="mt-3">
-                      <div className="mb-1 flex items-center gap-2">
-                        <h3 className="text-2xl font-semibold leading-tight text-[#25344f]">{card.name}</h3>
-                        {card.verified ? <span className="text-[#1fb97a]">◌</span> : null}
-                      </div>
-
-                      <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-[#6e7e97]">
-                        <span>◉ {card.location}</span>
-                        <span className="rounded-full bg-[#edf1f6] px-2 py-0.5 text-xs font-semibold text-[#4f607c]">
-                          {card.category}
-                        </span>
-                      </div>
-
-                      <div className="mb-2 flex items-center justify-between text-sm text-[#6e7e97]">
-                        <span>◌ {card.attendees.toLocaleString()}</span>
-                        <span className="rounded-full bg-[#fff2dd] px-2 py-1 text-xs font-semibold text-[#cf7f00]">
-                          {card.matchScore}% match
-                        </span>
-                      </div>
-
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        {card.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="rounded-full bg-[#f0f3f8] px-2 py-1 text-xs font-medium text-[#70809a]"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-[#6c7c96]">From ${card.budgetFrom}</p>
-                        <Link
-                          href={`/sponsor/discover?creator=${card.id}`}
-                          className="rounded-xl bg-[#f79009] px-5 py-2 text-sm font-semibold text-white transition hover:bg-[#da7f08]"
-                        >
-                          View Profile
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+            {viewMode === "grid" ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredCreators.map((creator) => (
+                  <CreatorCard
+                    key={creator.id}
+                    creator={creator}
+                    isSaved={savedCreatorIds.includes(creator.id)}
+                    onToggleSave={() => toggleSave(creator.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredCreators.map((creator) => (
+                  <CreatorListItem
+                    key={creator.id}
+                    creator={creator}
+                    isSaved={savedCreatorIds.includes(creator.id)}
+                    onToggleSave={() => toggleSave(creator.id)}
+                  />
+                ))}
+              </div>
+            )}
 
             {filteredCreators.length === 0 ? (
-              <div className="mt-4 rounded-2xl border border-dashed border-[#d9e0eb] bg-white p-8 text-center text-sm text-[#6f809a]">
-                No creators match the current filters. Try broadening your criteria.
+              <div className="mt-4 rounded-lg border border-dashed border-[#d9e2ef] bg-white p-8 text-center text-sm text-[#64748b]">
+                No creators match the current filters.
+                <button type="button" onClick={resetFilters} className="ml-2 font-semibold text-[#f79009]">
+                  Reset filters
+                </button>
               </div>
             ) : null}
+
+            <p className="mt-8 text-sm text-[#7a879d]">Signed in as {session?.user?.name || "Sponsor"}</p>
           </section>
         </div>
-
-        <p className="mt-8 text-sm text-[#7a879d]">
-          Signed in as {session?.user?.name || "Sponsor"}
-        </p>
       </div>
     </main>
+  );
+}
+
+function FilterBlock({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-5">
+      <p className="mb-2 text-xs font-bold text-[#0f172a]">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function CreatorCard({
+  creator,
+  isSaved,
+  onToggleSave,
+}: {
+  creator: MarketplaceCreator;
+  isSaved: boolean;
+  onToggleSave: () => void;
+}) {
+  return (
+    <article className="group flex h-full min-h-[252px] flex-col overflow-hidden rounded-lg border border-[#d9e2ef] bg-white shadow-[0_2px_10px_rgba(15,23,42,0.07)] transition hover:shadow-[0_8px_20px_rgba(15,23,42,0.08)]">
+      <div className="relative h-16 bg-[#13203e]">
+        <button
+          type="button"
+          onClick={onToggleSave}
+          className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-lg border border-[#d9e2ef] bg-white/90 text-[#64748b] hover:text-[#f79009]"
+          aria-label={isSaved ? `Remove ${creator.name} from saved` : `Save ${creator.name}`}
+        >
+          <Heart className={`h-4 w-4 ${isSaved ? "fill-[#f79009] text-[#f79009]" : ""}`} />
+        </button>
+      </div>
+      <div className="relative flex flex-1 flex-col p-4 pt-8">
+        <div className="absolute -top-5 left-4 grid h-10 w-10 place-items-center rounded-lg border border-[#d9e2ef] bg-white text-xl shadow-sm">
+          {creator.logo}
+        </div>
+        <div className="mb-1 flex items-center gap-2">
+          <h2 className="truncate text-sm font-bold text-[#0f172a] group-hover:text-[#f79009]">{creator.name}</h2>
+          {creator.verified ? <Shield className="h-3.5 w-3.5 shrink-0 text-[#10b981]" /> : null}
+        </div>
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-[#64748b]">
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {creator.location}
+          </span>
+          <span className="rounded-full border border-[#d9e2ef] px-2 py-0.5 text-[10px] font-semibold text-[#0f172a]">
+            {creator.category}
+          </span>
+        </div>
+        <div className="mb-3 flex items-center justify-between text-xs">
+          <span className="inline-flex items-center gap-1 text-[#64748b]">
+            <Users className="h-3 w-3" />
+            {creator.audienceSize.toLocaleString()}
+          </span>
+          <Match score={creator.matchScore} />
+        </div>
+        <div className="mb-4 flex flex-wrap gap-1.5">
+          {creator.interests.slice(0, 3).map((interest) => (
+            <span key={interest} className="rounded-full bg-[#edf2f7] px-2 py-1 text-[10px] font-medium text-[#64748b]">
+              {interest}
+            </span>
+          ))}
+        </div>
+        <div className="mt-auto flex items-center justify-between">
+          <span className="text-xs text-[#64748b]">From ${firstPackage(creator).price.toLocaleString()}</span>
+          <Link
+            href={`/sponsor/discover?creator=${creator.id}`}
+            className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+          >
+            View Profile
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function CreatorListItem({
+  creator,
+  isSaved,
+  onToggleSave,
+}: {
+  creator: MarketplaceCreator;
+  isSaved: boolean;
+  onToggleSave: () => void;
+}) {
+  return (
+    <article className="flex items-center gap-4 rounded-lg border border-[#d9e2ef] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)]">
+      <div className="grid h-12 w-12 place-items-center rounded-lg bg-[#edf2f7] text-2xl">{creator.logo}</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h2 className="truncate text-sm font-bold text-[#0f172a]">{creator.name}</h2>
+          {creator.verified ? <Shield className="h-3.5 w-3.5 text-[#10b981]" /> : null}
+          <span className="rounded-full border border-[#d9e2ef] px-2 py-0.5 text-[10px] font-semibold">
+            {creator.category}
+          </span>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-4 text-xs text-[#64748b]">
+          <span>{creator.location}</span>
+          <span>{creator.audienceSize.toLocaleString()} audience</span>
+          <span>From ${firstPackage(creator).price.toLocaleString()}</span>
+        </div>
+      </div>
+      <Match score={creator.matchScore} />
+      <button type="button" onClick={onToggleSave} className="p-2 text-[#64748b]" aria-label="Save creator">
+        <Heart className={`h-4 w-4 ${isSaved ? "fill-[#f79009] text-[#f79009]" : ""}`} />
+      </button>
+      <Link
+        href={`/sponsor/discover?creator=${creator.id}`}
+        className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+      >
+        View
+      </Link>
+    </article>
+  );
+}
+
+function Match({ score, className = "" }: { score: number; className?: string }) {
+  return (
+    <span className={`inline-flex w-fit rounded-full border border-[#ffd59b] bg-[#fff2dd] px-2.5 py-1 text-[11px] font-bold text-[#f79009] ${className}`}>
+      {score}% match
+    </span>
   );
 }
