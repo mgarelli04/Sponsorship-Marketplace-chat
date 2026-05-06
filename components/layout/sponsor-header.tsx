@@ -10,7 +10,7 @@ export default function SponsorHeader() {
   const isDiscoverRoute = pathname === "/sponsor/discover";
   const isSavedRoute = pathname === "/sponsor/saved";
 
-  if (pathname === "/sponsor/login") {
+  if (pathname === "/sponsor/login" || pathname === "/sponsor/register") {
     return null;
   }
 
