@@ -8,7 +8,7 @@ export default function CreatorHeader() {
   const pathname = usePathname();
   const router = useRouter();
 
-  if (pathname === "/creator/login") {
+  if (pathname === "/creator/login" || pathname === "/creator/register") {
     return null;
   }
 
