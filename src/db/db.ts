@@ -13,7 +13,7 @@ if (!connectionString) {
 	throw new Error('Falta DATABASE_URL o SUPABASE_DATABASE_URL en el archivo .env.local.');
 }
 
-const queryClient = postgres(connectionString, { prepare: false });
+export const queryClient = postgres(connectionString, { prepare: false });
 
 export const db = drizzle(queryClient, { schema });
 
