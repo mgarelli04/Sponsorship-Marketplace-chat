@@ -1,166 +1,152 @@
-"use client";
-
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/src/auth/options";
+import { getCreatorDashboardData } from "@/src/creator/data";
 
-export default function CreatorDashboard() {
-  const { data: session, status } = useSession();
+const numberFormatter = new Intl.NumberFormat("en-US");
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "2-digit",
+  year: "numeric",
+});
 
-  if (status === "loading") {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f5f6f8]">
-        <p className="text-[#6b7e9e]">Loading...</p>
-      </main>
-    );
+function formatDate(value: Date | string | null) {
+  if (!value) {
+    return "No date";
   }
+
+  return dateFormatter.format(new Date(value));
+}
+
+function statusLabel(status: string) {
+  return status
+    .split("_")
+    .map((part) => part[0]?.toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+export default async function CreatorDashboard() {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user?.id || session.user.role !== "creator" || !session.user.email) {
+    redirect("/creator/login");
+  }
+
+  const data = await getCreatorDashboardData({
+    userId: session.user.id,
+    email: session.user.email,
+    fullName: session.user.name,
+  });
 
   return (
     <main className="min-h-screen bg-[#f5f6f8]">
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Welcome Section */}
+      <div className="mx-auto max-w-7xl px-6 py-12">
         <div className="mb-10">
-          <h1 className="text-4xl font-bold text-[#0f1c3f] mb-2">
-            Welcome back, {session?.user?.name || "Creator"}
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-[#f79009]">
+            {data.creator.profileStatus}
+          </p>
+          <h1 className="mb-2 text-4xl font-bold text-[#0f1c3f]">
+            Welcome back, {data.profile?.fullName || data.creator.displayName}
           </h1>
           <p className="text-base text-[#6b7e9e]">
-            Here&apos;s how your sponsorship pipeline looks today.
+            Dashboard for {data.creator.displayName}. Your media kit and pipeline are loaded from your account data.
           </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {/* Profile Views */}
-          <div className="bg-white rounded-lg p-6 border border-[#d9e0eb]">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">👁️</span>
-              <span className="text-sm font-semibold text-[#00b366]">+18%</span>
-            </div>
-            <p className="text-4xl font-bold text-[#0f1c3f] mb-1">2,340</p>
-            <p className="text-sm text-[#6b7e9e]">Profile Views</p>
+        <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+              {numberFormatter.format(data.stats.totalAudience)}
+            </p>
+            <p className="text-sm text-[#6b7e9e]">Verified Audience</p>
           </div>
 
-          {/* Active Leads */}
-          <div className="bg-white rounded-lg p-6 border border-[#d9e0eb]">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">👥</span>
-              <span className="text-sm font-semibold text-[#00b366]">+2</span>
-            </div>
-            <p className="text-4xl font-bold text-[#0f1c3f] mb-1">5</p>
+          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+              {data.stats.activeLeads}
+            </p>
             <p className="text-sm text-[#6b7e9e]">Active Leads</p>
           </div>
 
-          {/* Deals Closed */}
-          <div className="bg-white rounded-lg p-6 border border-[#d9e0eb]">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">📈</span>
-              <span className="text-sm font-semibold text-[#00b366]">$95K</span>
-            </div>
-            <p className="text-4xl font-bold text-[#0f1c3f] mb-1">3</p>
-            <p className="text-sm text-[#6b7e9e]">Deals Closed</p>
+          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+              {data.stats.closedDeals}
+            </p>
+            <p className="text-sm text-[#6b7e9e]">
+              Deals Closed
+              {data.stats.revenueWon > 0 ? ` - ${currencyFormatter.format(data.stats.revenueWon)}` : ""}
+            </p>
           </div>
 
-          {/* Media Kit Score */}
-          <div className="bg-white rounded-lg p-6 border border-[#d9e0eb]">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-2xl">📊</span>
-              <span className="text-sm font-semibold text-[#00b366]">
-                Excellent
-              </span>
-            </div>
-            <p className="text-4xl font-bold text-[#0f1c3f] mb-1">92%</p>
+          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+              {data.stats.mediaKitScore}%
+            </p>
             <p className="text-sm text-[#6b7e9e]">Media Kit Score</p>
           </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Recent Inquiries */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-[#0f1c3f]">
-                Recent Inquiries
-              </h2>
-              <a
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-[#0f1c3f]">Recent Inquiries</h2>
+              <Link
                 href="/creator/leads"
                 className="text-sm font-medium text-[#0a66c2] hover:underline"
               >
-                View all →
-              </a>
+                View all
+              </Link>
             </div>
 
             <div className="space-y-4">
-              {/* Nike */}
-              <div className="bg-white rounded-lg p-5 border border-[#d9e0eb] flex items-center gap-4 hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)] transition">
-                <div className="w-12 h-12 rounded-lg bg-[#fef3e2] flex items-center justify-center text-xl shrink-0">
-                  👟
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[#0f1c3f] mb-1">Nike</h3>
-                  <p className="text-sm text-[#6b7e9e]">
-                    Gold Package · Brand Awareness
+              {data.recentInquiries.length > 0 ? (
+                data.recentInquiries.map(({ inquiry, sponsor, package: selectedPackage }) => (
+                  <article
+                    key={inquiry.id}
+                    className="flex items-center gap-4 rounded-lg border border-[#d9e0eb] bg-white p-5 transition hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)]"
+                  >
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-lg font-bold text-[#0a66c2]">
+                      {(sponsor?.name || "S").slice(0, 1)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mb-1 font-semibold text-[#0f1c3f]">
+                        {sponsor?.name || "Sponsor"}
+                      </h3>
+                      <p className="truncate text-sm text-[#6b7e9e]">
+                        {selectedPackage?.name || "Custom inquiry"} - {statusLabel(inquiry.campaignGoal)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span className="rounded-full bg-[#fff3e2] px-3 py-1 text-xs font-medium text-[#f79009]">
+                        {statusLabel(inquiry.status)}
+                      </span>
+                      <span className="hidden whitespace-nowrap text-sm text-[#6b7e9e] sm:inline">
+                        {formatDate(inquiry.createdAt)}
+                      </span>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-[#cfd8e6] bg-white p-8">
+                  <h3 className="font-semibold text-[#0f1c3f]">No inquiries yet</h3>
+                  <p className="mt-2 text-sm text-[#6b7e9e]">
+                    Publish your media kit and add sponsorship packages to make this pipeline useful.
                   </p>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="px-3 py-1 rounded-full bg-[#fff3e2] text-[#f79009] text-xs font-medium whitespace-nowrap">
-                    Pending
-                  </span>
-                  <span className="text-sm text-[#6b7e9e] whitespace-nowrap">
-                    2025-03-07
-                  </span>
-                </div>
-              </div>
-
-              {/* Spotify */}
-              <div className="bg-white rounded-lg p-5 border border-[#d9e0eb] flex items-center gap-4 hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)] transition">
-                <div className="w-12 h-12 rounded-lg bg-[#e2f0ff] flex items-center justify-center text-xl shrink-0">
-                  🎵
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[#0f1c3f] mb-1">Spotify</h3>
-                  <p className="text-sm text-[#6b7e9e]">
-                    Silver Package · Lead Generation
-                  </p>
-                </div>
-                <span className="text-sm text-[#6b7e9e] whitespace-nowrap">
-                  2025-03-05
-                </span>
-              </div>
-
-              {/* Red Bull */}
-              <div className="bg-white rounded-lg p-5 border border-[#d9e0eb] flex items-center gap-4 hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)] transition">
-                <div className="w-12 h-12 rounded-lg bg-[#fff0f0] flex items-center justify-center text-xl shrink-0">
-                  🐂
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[#0f1c3f] mb-1">
-                    Red Bull
-                  </h3>
-                  <p className="text-sm text-[#6b7e9e]">
-                    Gold Package · Community Building
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="px-3 py-1 rounded-full bg-[#e2f5f0] text-[#00b366] text-xs font-medium whitespace-nowrap">
-                    Won
-                  </span>
-                  <span className="text-sm text-[#6b7e9e] whitespace-nowrap">
-                    2025-02-28
-                  </span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Quick Actions Sidebar */}
           <aside className="space-y-4">
             <div>
-              <h2 className="text-2xl font-bold text-[#0f1c3f] mb-2">
-                Quick Actions
-              </h2>
-              <p className="text-sm text-[#6b7e9e]">
-                Jump to the pages you use most.
-              </p>
+              <h2 className="mb-2 text-2xl font-bold text-[#0f1c3f]">Quick Actions</h2>
+              <p className="text-sm text-[#6b7e9e]">Jump to the pages you use most.</p>
             </div>
 
             <Link
@@ -168,40 +154,18 @@ export default function CreatorDashboard() {
               className="group block rounded-2xl border border-[#d9e0eb] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#cfd8e6] hover:bg-[#fbfcfe] hover:shadow-[0_10px_24px_rgba(18,34,72,0.08)]"
             >
               <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fef7ef] text-2xl text-[#f79009]">
-                  📝
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#fef7ef] text-lg font-bold text-[#f79009]">
+                  MK
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold text-[#0f1c3f]">Edit Media Kit</h3>
+                    <h3 className="font-semibold text-[#0f1c3f]">Open Media Kit</h3>
                     <span className="text-sm font-semibold text-[#0a66c2] group-hover:underline">
-                      Open →
+                      Open
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-[#6b7e9e]">
-                    Update packages, add events, and refresh your offer sheet.
-                  </p>
-                </div>
-              </div>
-            </Link>
-
-            <Link
-              href="/creator/leads"
-              className="group block rounded-2xl border border-[#d9e0eb] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#cfd8e6] hover:bg-[#fbfcfe] hover:shadow-[0_10px_24px_rgba(18,34,72,0.08)]"
-            >
-              <div className="flex items-start gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eef5ff] text-2xl text-[#0a66c2]">
-                  📧
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold text-[#0f1c3f]">Manage Leads</h3>
-                    <span className="text-sm font-semibold text-[#0a66c2] group-hover:underline">
-                      Open →
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm text-[#6b7e9e]">
-                    Review pending inquiries and move deals forward.
+                    Review your profile, audience data, packages, and sponsor inventory.
                   </p>
                 </div>
               </div>
@@ -210,16 +174,37 @@ export default function CreatorDashboard() {
             <div className="rounded-2xl border border-[#d9e0eb] bg-white p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-[#0f1c3f]">Profile Completeness</h3>
-                <span className="text-sm font-semibold text-[#f79009]">92%</span>
+                <span className="text-sm font-semibold text-[#f79009]">
+                  {data.stats.mediaKitScore}%
+                </span>
               </div>
               <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#e2e7ef]">
                 <div
-                  className="h-full w-[92%] rounded-full bg-[#f79009]"
+                  className="h-full rounded-full bg-[#f79009]"
+                  style={{ width: `${data.stats.mediaKitScore}%` }}
                 />
               </div>
               <p className="mt-2 text-xs text-[#6b7e9e]">
-                Add a promo video to reach 100%
+                Complete your media kit sections to improve this score.
               </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#d9e0eb] bg-white p-5">
+              <h3 className="font-semibold text-[#0f1c3f]">Recent Events</h3>
+              <div className="mt-4 space-y-3">
+                {data.recentEvents.length > 0 ? (
+                  data.recentEvents.slice(0, 3).map((event) => (
+                    <div key={event.id} className="border-b border-[#eef2f7] pb-3 last:border-0 last:pb-0">
+                      <p className="text-sm font-medium text-[#0f1c3f]">{event.title}</p>
+                      <p className="mt-1 text-xs text-[#6b7e9e]">
+                        {formatDate(event.startsAt)} - {numberFormatter.format(event.ticketsSold)} tickets
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[#6b7e9e]">No events connected yet.</p>
+                )}
+              </div>
             </div>
           </aside>
         </div>

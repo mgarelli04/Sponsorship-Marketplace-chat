@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { ensureCreatorForUser } from "@/src/creator/defaults";
 import { db } from "@/src/db/db";
 import { profiles } from "@/src/db/schema";
 
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear perfil en la base de datos
+    // Crear perfil en la base de datos y los datos base de creator si aplica.
     try {
       await db.insert(profiles).values({
         id: authData.user.id,
@@ -77,7 +78,16 @@ export async function POST(request: NextRequest) {
         role: userType,
         status: "active",
       });
+
+      if (userType === "creator") {
+        await ensureCreatorForUser({
+          userId: authData.user.id,
+          email,
+          fullName,
+        });
+      }
     } catch (dbError) {
+      console.error("Profile bootstrap error:", dbError);
       // Si falla la creación del perfil, eliminar el usuario de auth
       await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
