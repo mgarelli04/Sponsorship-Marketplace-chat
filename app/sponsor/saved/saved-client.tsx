@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { Heart, MapPin, Search, ShieldCheck, Users } from "lucide-react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { DiscoverDataSourceStatus, MarketplaceCreator } from "@/src/data/sponsor-marketplace";
 
 const STORAGE_KEY = "sponsorSavedCreators";
-const EMPTY_SAVED_CREATORS: string[] = [];
-let cachedSavedRaw: string | null = null;
-let cachedSavedCreators: string[] = EMPTY_SAVED_CREATORS;
 const SORT_OPTIONS = ["Recently Saved", "Highest Match", "Audience Size"] as const;
 
 type SavedSortOption = (typeof SORT_OPTIONS)[number];
@@ -21,38 +18,10 @@ function readSavedCreators() {
 
   try {
     const rawSaved = window.localStorage.getItem(STORAGE_KEY);
-    if (!rawSaved) {
-      cachedSavedRaw = null;
-      cachedSavedCreators = EMPTY_SAVED_CREATORS;
-      return cachedSavedCreators;
-    }
-
-    if (rawSaved === cachedSavedRaw) {
-      return cachedSavedCreators;
-    }
-
-    cachedSavedRaw = rawSaved;
-    cachedSavedCreators = JSON.parse(rawSaved) as string[];
-    return cachedSavedCreators;
+    return rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
   } catch {
-    cachedSavedRaw = null;
-    cachedSavedCreators = EMPTY_SAVED_CREATORS;
-    return cachedSavedCreators;
+    return [];
   }
-}
-
-function subscribeToSavedCreators(callback: () => void) {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
-  window.addEventListener("sponsor-saved-updated", callback);
-  window.addEventListener("storage", callback);
-
-  return () => {
-    window.removeEventListener("sponsor-saved-updated", callback);
-    window.removeEventListener("storage", callback);
-  };
 }
 
 function writeSavedCreators(ids: string[]) {
@@ -84,15 +53,24 @@ export default function SponsorSavedClient({
   sourceMessage?: string;
 }) {
   const { data: session, status } = useSession();
-  const savedCreatorIds = useSyncExternalStore(
-    subscribeToSavedCreators,
-    readSavedCreators,
-    () => EMPTY_SAVED_CREATORS,
-  );
+  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const categoryOptions = useMemo(() => ["All", ...categories], [categories]);
   const [activeCategory, setActiveCategory] = useState("All");
   const [sortBy, setSortBy] = useState<SavedSortOption>("Recently Saved");
+
+  useEffect(() => {
+    const syncSavedCreators = () => setSavedCreatorIds(readSavedCreators());
+
+    syncSavedCreators();
+    window.addEventListener("sponsor-saved-updated", syncSavedCreators);
+    window.addEventListener("storage", syncSavedCreators);
+
+    return () => {
+      window.removeEventListener("sponsor-saved-updated", syncSavedCreators);
+      window.removeEventListener("storage", syncSavedCreators);
+    };
+  }, []);
 
   const savedCreators = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -127,7 +105,9 @@ export default function SponsorSavedClient({
   const totalBudget = savedCreators.reduce((sum, creator) => sum + (creator.packages[0]?.price ?? 0), 0);
 
   const removeSavedCreator = (creatorId: string) => {
-    writeSavedCreators(savedCreatorIds.filter((id) => id !== creatorId));
+    const nextSaved = savedCreatorIds.filter((id) => id !== creatorId);
+    setSavedCreatorIds(nextSaved);
+    writeSavedCreators(nextSaved);
   };
 
   if (status === "loading") {

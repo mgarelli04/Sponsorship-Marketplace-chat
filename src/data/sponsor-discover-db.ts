@@ -115,14 +115,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
 
     const creatorIds = creatorRows.map((creator) => creator.id);
 
-    const [
-      creatorCategoryRows,
-      creatorInterestRows,
-      packageRows,
-      snapshotRows,
-      eventRows,
-      pastSponsorRows,
-    ] = await Promise.all([
+    const [creatorCategoryRows, creatorInterestRows, packageRows] = await Promise.all([
       db
         .select({
           creatorId: creatorCategories.creatorId,
@@ -142,14 +135,52 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
         .innerJoin(interests, eq(creatorInterests.interestId, interests.id))
         .where(inArray(creatorInterests.creatorId, creatorIds)),
       db
-        .select()
+        .select({
+          creatorId: packages.creatorId,
+          packageType: packages.packageType,
+          priceAmount: packages.priceAmount,
+          estimatedImpressions: packages.estimatedImpressions,
+          estimatedReach: packages.estimatedReach,
+          estimatedCpm: packages.estimatedCpm,
+          description: packages.description,
+        })
         .from(packages)
         .where(and(inArray(packages.creatorId, creatorIds), eq(packages.isPublic, true)))
         .orderBy(asc(packages.sortOrder)),
-      db.select().from(audienceSnapshots).where(inArray(audienceSnapshots.creatorId, creatorIds)),
-      db.select().from(events).where(inArray(events.creatorId, creatorIds)),
-      db.select().from(creatorPastSponsors).where(inArray(creatorPastSponsors.creatorId, creatorIds)),
     ]);
+
+    const [snapshotResult, eventResult, pastSponsorResult] = await Promise.allSettled([
+      db
+        .select({
+          creatorId: audienceSnapshots.creatorId,
+          snapshotDate: audienceSnapshots.snapshotDate,
+          totalAttendees: audienceSnapshots.totalAttendees,
+          totalTicketsSold: audienceSnapshots.totalTicketsSold,
+          totalCheckins: audienceSnapshots.totalCheckins,
+          repeatAttendancePct: audienceSnapshots.repeatAttendancePct,
+        })
+        .from(audienceSnapshots)
+        .where(inArray(audienceSnapshots.creatorId, creatorIds)),
+      db
+        .select({
+          creatorId: events.creatorId,
+          ticketsSold: events.ticketsSold,
+          checkinsCount: events.checkinsCount,
+        })
+        .from(events)
+        .where(inArray(events.creatorId, creatorIds)),
+      db
+        .select({
+          creatorId: creatorPastSponsors.creatorId,
+          sponsorName: creatorPastSponsors.sponsorName,
+        })
+        .from(creatorPastSponsors)
+        .where(inArray(creatorPastSponsors.creatorId, creatorIds)),
+    ]);
+
+    const snapshotRows = snapshotResult.status === "fulfilled" ? snapshotResult.value : [];
+    const eventRows = eventResult.status === "fulfilled" ? eventResult.value : [];
+    const pastSponsorRows = pastSponsorResult.status === "fulfilled" ? pastSponsorResult.value : [];
 
     const categoriesByCreator = new Map<string, string[]>();
     for (const row of creatorCategoryRows) {

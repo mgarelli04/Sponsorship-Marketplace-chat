@@ -15,7 +15,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   type AudienceType,
   type MarketplaceCreator,
@@ -23,10 +23,6 @@ import {
 } from "@/src/data/sponsor-marketplace";
 
 const STORAGE_KEY = "sponsorSavedCreators";
-const EMPTY_SAVED_CREATORS: string[] = [];
-let cachedSavedRaw: string | null = null;
-let cachedSavedCreators: string[] = EMPTY_SAVED_CREATORS;
-
 const AUDIENCE_SIZE_OPTIONS = ["Any size", "1,000+", "5,000+", "10,000+"] as const;
 const BUDGET_OPTIONS = ["Any budget", "Under $5K", "$5K - $15K", "$15K - $35K", "$35K+"] as const;
 const SORT_OPTIONS = ["Most Relevant", "Highest Audience", "Lowest CPM", "Recently Updated"] as const;
@@ -37,44 +33,15 @@ type SortOption = (typeof SORT_OPTIONS)[number];
 
 function readSavedCreators() {
   if (typeof window === "undefined") {
-    return EMPTY_SAVED_CREATORS;
+    return [] as string[];
   }
 
   try {
     const rawSaved = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!rawSaved) {
-      cachedSavedRaw = null;
-      cachedSavedCreators = EMPTY_SAVED_CREATORS;
-      return cachedSavedCreators;
-    }
-
-    if (rawSaved === cachedSavedRaw) {
-      return cachedSavedCreators;
-    }
-
-    cachedSavedRaw = rawSaved;
-    cachedSavedCreators = JSON.parse(rawSaved) as string[];
-    return cachedSavedCreators;
+    return rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
   } catch {
-    cachedSavedRaw = null;
-    cachedSavedCreators = EMPTY_SAVED_CREATORS;
-    return cachedSavedCreators;
+    return [];
   }
-}
-
-function subscribeToSavedCreators(callback: () => void) {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
-  window.addEventListener("storage", callback);
-  window.addEventListener("sponsor-saved-updated", callback);
-
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener("sponsor-saved-updated", callback);
-  };
 }
 
 function writeSavedCreators(ids: string[]) {
@@ -110,11 +77,7 @@ export default function SponsorDiscoverClient({
   sourceMessage?: string;
 }) {
   const { data: session, status } = useSession();
-  const savedCreatorIds = useSyncExternalStore(
-    subscribeToSavedCreators,
-    readSavedCreators,
-    () => EMPTY_SAVED_CREATORS,
-  );
+  const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(true);
   const categoryOptions = useMemo(() => ["All", ...categories], [categories]);
@@ -125,6 +88,19 @@ export default function SponsorDiscoverClient({
   const [selectedAudienceTypes, setSelectedAudienceTypes] = useState<AudienceType[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("Most Relevant");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  useEffect(() => {
+    const syncSavedCreators = () => setSavedCreatorIds(readSavedCreators());
+
+    syncSavedCreators();
+    window.addEventListener("storage", syncSavedCreators);
+    window.addEventListener("sponsor-saved-updated", syncSavedCreators);
+
+    return () => {
+      window.removeEventListener("storage", syncSavedCreators);
+      window.removeEventListener("sponsor-saved-updated", syncSavedCreators);
+    };
+  }, []);
 
   const filteredCreators = useMemo(() => {
     const results = creators.filter((creator) => {
@@ -184,6 +160,7 @@ export default function SponsorDiscoverClient({
       ? savedCreatorIds.filter((id) => id !== creatorId)
       : [...savedCreatorIds, creatorId];
 
+    setSavedCreatorIds(nextSaved);
     writeSavedCreators(nextSaved);
   };
 

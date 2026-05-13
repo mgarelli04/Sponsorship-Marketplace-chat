@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 const STORAGE_KEY = "sponsorSavedCreators";
 
@@ -20,25 +20,24 @@ function readSavedCount() {
   }
 }
 
-function subscribeToSavedCount(callback: () => void) {
-  if (typeof window === "undefined") {
-    return () => {};
-  }
-
-  window.addEventListener("sponsor-saved-updated", callback);
-  window.addEventListener("storage", callback);
-
-  return () => {
-    window.removeEventListener("sponsor-saved-updated", callback);
-    window.removeEventListener("storage", callback);
-  };
-}
-
 export default function SponsorHeader() {
   const pathname = usePathname();
-  const savedCount = useSyncExternalStore(subscribeToSavedCount, readSavedCount, () => 0);
+  const [savedCount, setSavedCount] = useState(0);
   const isDiscoverRoute = pathname === "/sponsor/discover";
   const isSavedRoute = pathname === "/sponsor/saved";
+
+  useEffect(() => {
+    const syncSavedCount = () => setSavedCount(readSavedCount());
+
+    syncSavedCount();
+    window.addEventListener("sponsor-saved-updated", syncSavedCount);
+    window.addEventListener("storage", syncSavedCount);
+
+    return () => {
+      window.removeEventListener("sponsor-saved-updated", syncSavedCount);
+      window.removeEventListener("storage", syncSavedCount);
+    };
+  }, []);
 
   if (pathname === "/sponsor/login") {
     return null;
@@ -87,7 +86,7 @@ export default function SponsorHeader() {
         </div>
 
         <div className="hidden h-7 w-7 items-center justify-center rounded-full bg-[#f3f0ff] text-xs md:flex" aria-label="Sponsor account">
-          🏢
+          &#127970;
         </div>
       </div>
     </header>
