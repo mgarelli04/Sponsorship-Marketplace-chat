@@ -103,7 +103,25 @@ export default function SponsorDiscoverClient({
   }, []);
 
   const filteredCreators = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
     const results = creators.filter((creator) => {
+      const searchableText = [
+        creator.name,
+        creator.tagline,
+        creator.location,
+        creator.city,
+        creator.region,
+        creator.country,
+        creator.category,
+        ...creator.interests,
+        ...creator.audienceTypes,
+        ...creator.previousSponsors,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const matchesQuery = normalizedQuery.length === 0 || searchableText.includes(normalizedQuery);
       const matchesCategory = selectedCategory === "All" || creator.category === selectedCategory;
       const matchesVerified = !verifiedOnly || creator.verified;
       const matchesAudienceType =
@@ -124,6 +142,7 @@ export default function SponsorDiscoverClient({
             (budgetRange === "$35K+" && packagePrice > 35000)));
 
       return (
+        matchesQuery &&
         matchesCategory &&
         matchesVerified &&
         matchesAudienceType &&
@@ -147,7 +166,7 @@ export default function SponsorDiscoverClient({
 
       return b.matchScore - a.matchScore;
     });
-  }, [audienceSize, budgetRange, creators, selectedAudienceTypes, selectedCategory, sortBy, verifiedOnly]);
+  }, [audienceSize, budgetRange, creators, query, selectedAudienceTypes, selectedCategory, sortBy, verifiedOnly]);
 
   const toggleAudienceType = (type: AudienceType) => {
     setSelectedAudienceTypes((previous) =>
