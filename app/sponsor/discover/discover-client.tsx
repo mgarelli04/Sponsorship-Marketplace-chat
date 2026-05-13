@@ -168,6 +168,11 @@ export default function SponsorDiscoverClient({
     });
   }, [audienceSize, budgetRange, creators, query, selectedAudienceTypes, selectedCategory, sortBy, verifiedOnly]);
 
+  const recommendedCreators = useMemo(
+    () => [...filteredCreators].sort((a, b) => b.matchScore - a.matchScore).slice(0, 3),
+    [filteredCreators],
+  );
+
   const toggleAudienceType = (type: AudienceType) => {
     setSelectedAudienceTypes((previous) =>
       previous.includes(type) ? previous.filter((item) => item !== type) : [...previous, type],
@@ -373,7 +378,7 @@ export default function SponsorDiscoverClient({
                 Recommended for you
               </h3>
               <div className="flex gap-3 overflow-x-auto pb-1">
-                {creators.slice(0, 3).map((creator) => (
+                {recommendedCreators.map((creator) => (
                   <Link
                     key={creator.id}
                     href={`/sponsor/discover?creator=${creator.id}`}
