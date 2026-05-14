@@ -18,6 +18,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    const validGoals = ["brand_awareness", "lead_generation", "product_launch", "community_building", "sampling", "employer_branding"];
+    if (!validGoals.includes(campaignGoal)) {
+      return NextResponse.json({ error: "Invalid campaign goal" }, { status: 400 });
+    }
+
+    const validSources = ["public_profile", "search", "direct_link", "admin_created"];
+    if (!validSources.includes(source)) {
+      return NextResponse.json({ error: "Invalid source" }, { status: 400 });
+    }
+
     const extras: string[] = [];
     if (packageTier) extras.push(`Package: ${packageTier}${packagePrice ? ` ($${Number(packagePrice).toLocaleString()})` : ""}`);
 
