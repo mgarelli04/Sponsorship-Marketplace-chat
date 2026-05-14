@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { DiscoverDataSourceStatus, MarketplaceCreator } from "@/src/data/sponsor-marketplace";
 
 const STORAGE_KEY = "sponsorSavedCreators";
-const SORT_OPTIONS = ["Recently Saved", "Highest Match", "Audience Size"] as const;
+const SORT_OPTIONS = ["Recently Saved", "Audience Size"] as const;
 
 type SavedSortOption = (typeof SORT_OPTIONS)[number];
 
@@ -90,10 +90,6 @@ export default function SponsorSavedClient({
     });
 
     return visible.sort((a, b) => {
-      if (sortBy === "Highest Match") {
-        return b.matchScore - a.matchScore;
-      }
-
       if (sortBy === "Audience Size") {
         return b.audienceSize - a.audienceSize;
       }
@@ -243,9 +239,7 @@ export default function SponsorSavedClient({
                         <Users className="h-3 w-3" />
                         {creator.audienceSize.toLocaleString()}
                       </span>
-                      <span className="rounded-full border border-[#ffd59b] bg-[#fff2dd] px-2.5 py-1 text-[11px] text-[#cf7f00]">
-                        {creator.matchScore}% match
-                      </span>
+
                     </div>
 
                     <div className="flex items-center justify-between gap-2">
@@ -253,7 +247,7 @@ export default function SponsorSavedClient({
                         {creator.packages[0] ? `From ${formatCurrency(creator.packages[0].price)}` : "No public package"}
                       </p>
                       <Link
-                        href={`/sponsor/discover?creator=${creator.id}`}
+                        href={`/sponsor/discover/${creator.id}`}
                         className="rounded-lg bg-[#f79009] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#da7f08]"
                       >
                         View Profile

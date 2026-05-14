@@ -1,12 +1,14 @@
 export type AudienceType = "B2C" | "B2B";
 
 export type CreatorPackage = {
+  id?: string;
   tier: "Bronze" | "Silver" | "Gold";
   price: number;
   impressions: number;
   reach: number;
   cpm: number;
   benefits: string[];
+  items: { name: string; description: string }[];
 };
 
 export type MarketplaceCreator = {

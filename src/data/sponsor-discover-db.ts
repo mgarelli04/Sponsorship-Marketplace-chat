@@ -72,22 +72,6 @@ function inferAudienceTypes(category: string, creatorInterestsList: string[]): A
   return ["B2C"];
 }
 
-function calculateMatchScore(creator: {
-  verified: boolean;
-  audienceSize: number;
-  returningAttendees: number;
-  checkInRate: number;
-  packageCount: number;
-}) {
-  const verificationScore = creator.verified ? 24 : 8;
-  const audienceScore = Math.min(28, Math.round(creator.audienceSize / 600));
-  const loyaltyScore = Math.min(18, Math.round(creator.returningAttendees / 4));
-  const checkInScore = Math.min(18, Math.round(creator.checkInRate / 6));
-  const packageScore = Math.min(12, creator.packageCount * 4);
-
-  return Math.max(45, Math.min(97, verificationScore + audienceScore + loyaltyScore + checkInScore + packageScore));
-}
-
 function getConnectionString() {
   return process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL;
 }
@@ -210,6 +194,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
         reach: row.estimatedReach ?? 0,
         cpm: toNumber(row.estimatedCpm),
         benefits: row.description ? [row.description] : [],
+        items: [],
       });
       packagesByCreator.set(row.creatorId, current);
     }
@@ -269,13 +254,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
         country: creator.countryCode,
         category: primaryCategory,
         audienceSize,
-        matchScore: calculateMatchScore({
-          verified,
-          audienceSize,
-          returningAttendees,
-          checkInRate,
-          packageCount: creatorPackages.length,
-        }),
+        matchScore: 0,
         verified,
         audienceTypes: inferAudienceTypes(primaryCategory, creatorInterestsList),
         interests: creatorInterestsList,

@@ -11,7 +11,6 @@ import {
   Search,
   Shield,
   SlidersHorizontal,
-  Star,
   Users,
   X,
 } from "lucide-react";
@@ -23,22 +22,19 @@ import {
 } from "@/src/data/sponsor-marketplace";
 
 const STORAGE_KEY = "sponsorSavedCreators";
-const AUDIENCE_SIZE_OPTIONS = ["Any size", "1,000+", "5,000+", "10,000+"] as const;
+const AUDIENCE_SIZE_OPTIONS = ["Any size", "5,000+", "10,000+"] as const;
 const BUDGET_OPTIONS = ["Any budget", "Under $5K", "$5K - $15K", "$15K - $35K", "$35K+"] as const;
-const SORT_OPTIONS = ["Most Relevant", "Highest Audience", "Lowest CPM", "Recently Updated"] as const;
+const SORT_OPTIONS = ["Highest Audience", "Lowest CPM", "Recently Updated"] as const;
 
 type AudienceSizeOption = (typeof AUDIENCE_SIZE_OPTIONS)[number];
 type BudgetOption = (typeof BUDGET_OPTIONS)[number];
 type SortOption = (typeof SORT_OPTIONS)[number];
 
 function readSavedCreators() {
-  if (typeof window === "undefined") {
-    return [] as string[];
-  }
-
+  if (typeof window === "undefined") return [];
   try {
-    const rawSaved = window.localStorage.getItem(STORAGE_KEY);
-    return rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
   } catch {
     return [];
   }
@@ -48,9 +44,7 @@ function writeSavedCreators(ids: string[]) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
     window.dispatchEvent(new Event("sponsor-saved-updated"));
-  } catch {
-    // Storage can be unavailable in private browsing contexts.
-  }
+  } catch {}
 }
 
 function firstPackage(creator: MarketplaceCreator) {
@@ -58,10 +52,7 @@ function firstPackage(creator: MarketplaceCreator) {
 }
 
 function bestCpm(creator: MarketplaceCreator) {
-  if (creator.packages.length === 0) {
-    return Number.POSITIVE_INFINITY;
-  }
-
+  if (creator.packages.length === 0) return Number.POSITIVE_INFINITY;
   return Math.min(...creator.packages.map((item) => item.cpm));
 }
 
@@ -80,25 +71,28 @@ export default function SponsorDiscoverClient({
   const [savedCreatorIds, setSavedCreatorIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [showFilters, setShowFilters] = useState(true);
-  const categoryOptions = useMemo(() => ["All", ...categories], [categories]);
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const categoryOptions = useMemo(() => [...categories], [categories]);
+  const cityOptions = useMemo(() => {
+    return [...new Set(creators.map((c) => c.city).filter(Boolean))].sort();
+  }, [creators]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
   const [audienceSize, setAudienceSize] = useState<AudienceSizeOption>("Any size");
   const [budgetRange, setBudgetRange] = useState<BudgetOption>("Any budget");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [selectedAudienceTypes, setSelectedAudienceTypes] = useState<AudienceType[]>([]);
-  const [sortBy, setSortBy] = useState<SortOption>("Most Relevant");
+  const [sortBy, setSortBy] = useState<SortOption>("Highest Audience");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   useEffect(() => {
-    const syncSavedCreators = () => setSavedCreatorIds(readSavedCreators());
-
-    syncSavedCreators();
-    window.addEventListener("storage", syncSavedCreators);
-    window.addEventListener("sponsor-saved-updated", syncSavedCreators);
-
+    const syncSaved = () => setSavedCreatorIds(readSavedCreators());
+    syncSaved();
+    window.addEventListener("storage", syncSaved);
+    window.addEventListener("sponsor-saved-updated", syncSaved);
     return () => {
-      window.removeEventListener("storage", syncSavedCreators);
-      window.removeEventListener("sponsor-saved-updated", syncSavedCreators);
+      window.removeEventListener("storage", syncSaved);
+      window.removeEventListener("sponsor-saved-updated", syncSaved);
     };
   }, []);
 
@@ -122,14 +116,15 @@ export default function SponsorDiscoverClient({
         .join(" ")
         .toLowerCase();
       const matchesQuery = normalizedQuery.length === 0 || searchableText.includes(normalizedQuery);
-      const matchesCategory = selectedCategory === "All" || creator.category === selectedCategory;
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(creator.category);
+      const matchesCity = selectedCities.length === 0 || selectedCities.includes(creator.city);
       const matchesVerified = !verifiedOnly || creator.verified;
+      const matchesSaved = !showSavedOnly || savedCreatorIds.includes(creator.id);
       const matchesAudienceType =
         selectedAudienceTypes.length === 0 ||
         selectedAudienceTypes.some((type) => creator.audienceTypes.includes(type));
       const matchesAudienceSize =
         audienceSize === "Any size" ||
-        (audienceSize === "1,000+" && creator.audienceSize >= 1000) ||
         (audienceSize === "5,000+" && creator.audienceSize >= 5000) ||
         (audienceSize === "10,000+" && creator.audienceSize >= 10000);
       const packagePrice = firstPackage(creator)?.price;
@@ -141,37 +136,15 @@ export default function SponsorDiscoverClient({
             (budgetRange === "$15K - $35K" && packagePrice >= 15000 && packagePrice <= 35000) ||
             (budgetRange === "$35K+" && packagePrice > 35000)));
 
-      return (
-        matchesQuery &&
-        matchesCategory &&
-        matchesVerified &&
-        matchesAudienceType &&
-        matchesAudienceSize &&
-        matchesBudget
-      );
+      return matchesQuery && matchesCategory && matchesCity && matchesVerified && matchesSaved && matchesAudienceType && matchesAudienceSize && matchesBudget;
     });
 
     return results.sort((a, b) => {
-      if (sortBy === "Highest Audience") {
-        return b.audienceSize - a.audienceSize;
-      }
-
-      if (sortBy === "Lowest CPM") {
-        return bestCpm(a) - bestCpm(b);
-      }
-
-      if (sortBy === "Recently Updated") {
-        return b.lastUpdated.localeCompare(a.lastUpdated);
-      }
-
-      return b.matchScore - a.matchScore;
+      if (sortBy === "Highest Audience") return b.audienceSize - a.audienceSize;
+      if (sortBy === "Lowest CPM") return bestCpm(a) - bestCpm(b);
+      return b.lastUpdated.localeCompare(a.lastUpdated);
     });
-  }, [audienceSize, budgetRange, creators, query, selectedAudienceTypes, selectedCategory, sortBy, verifiedOnly]);
-
-  const recommendedCreators = useMemo(
-    () => [...filteredCreators].sort((a, b) => b.matchScore - a.matchScore).slice(0, 3),
-    [filteredCreators],
-  );
+  }, [audienceSize, budgetRange, creators, query, savedCreatorIds, selectedAudienceTypes, selectedCategories, selectedCities, showSavedOnly, sortBy, verifiedOnly]);
 
   const toggleAudienceType = (type: AudienceType) => {
     setSelectedAudienceTypes((previous) =>
@@ -183,17 +156,18 @@ export default function SponsorDiscoverClient({
     const nextSaved = savedCreatorIds.includes(creatorId)
       ? savedCreatorIds.filter((id) => id !== creatorId)
       : [...savedCreatorIds, creatorId];
-
     setSavedCreatorIds(nextSaved);
     writeSavedCreators(nextSaved);
   };
 
   const resetFilters = () => {
     setQuery("");
-    setSelectedCategory("All");
+    setSelectedCategories([]);
+    setSelectedCities([]);
     setAudienceSize("Any size");
     setBudgetRange("Any budget");
     setVerifiedOnly(false);
+    setShowSavedOnly(false);
     setSelectedAudienceTypes([]);
   };
 
@@ -250,20 +224,71 @@ export default function SponsorDiscoverClient({
 
                 <FilterBlock title="Category">
                   <div className="space-y-1.5">
-                    {categoryOptions.map((category) => (
+                    {categoryOptions.map((category) => {
+                      const isActive = selectedCategories.includes(category);
+                      return (
+                        <button
+                          key={category}
+                          type="button"
+                          onClick={() =>
+                            setSelectedCategories((prev) =>
+                              isActive ? prev.filter((c) => c !== category) : [...prev, category],
+                            )
+                          }
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                            isActive
+                              ? "bg-[#fff2dd] font-medium text-[#f79009]"
+                              : "text-[#526984] hover:bg-[#f3f6fa]"
+                          }`}
+                        >
+                          {category}
+                        </button>
+                      );
+                    })}
+                    {selectedCategories.length > 0 && (
                       <button
-                        key={category}
                         type="button"
-                        onClick={() => setSelectedCategory(category)}
-                        className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
-                          selectedCategory === category
-                            ? "bg-[#fff2dd] font-medium text-[#f79009]"
-                            : "text-[#526984] hover:bg-[#f3f6fa]"
-                        }`}
+                        onClick={() => setSelectedCategories([])}
+                        className="w-full rounded-lg px-3 py-2 text-left text-xs text-[#94a3b8] transition hover:text-[#64748b]"
                       >
-                        {category}
+                        Clear selection
                       </button>
-                    ))}
+                    )}
+                  </div>
+                </FilterBlock>
+
+                <FilterBlock title="City">
+                  <div className="space-y-1.5">
+                    {cityOptions.map((city) => {
+                      const isActive = selectedCities.includes(city);
+                      return (
+                        <button
+                          key={city}
+                          type="button"
+                          onClick={() =>
+                            setSelectedCities((prev) =>
+                              isActive ? prev.filter((c) => c !== city) : [...prev, city],
+                            )
+                          }
+                          className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                            isActive
+                              ? "bg-[#fff2dd] font-medium text-[#f79009]"
+                              : "text-[#526984] hover:bg-[#f3f6fa]"
+                          }`}
+                        >
+                          {city}
+                        </button>
+                      );
+                    })}
+                    {selectedCities.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCities([])}
+                        className="w-full rounded-lg px-3 py-2 text-left text-xs text-[#94a3b8] transition hover:text-[#64748b]"
+                      >
+                        Clear selection
+                      </button>
+                    )}
                   </div>
                 </FilterBlock>
 
@@ -291,7 +316,7 @@ export default function SponsorDiscoverClient({
                   </select>
                 </FilterBlock>
 
-                <label className="mb-5 flex items-center gap-2 text-sm text-[#0f172a]">
+                <label className="mb-3 flex items-center gap-2 text-sm text-[#0f172a]">
                   <input
                     type="checkbox"
                     checked={verifiedOnly}
@@ -300,6 +325,17 @@ export default function SponsorDiscoverClient({
                   />
                   <Shield className="h-3.5 w-3.5 text-[#10b981]" />
                   Verified only
+                </label>
+
+                <label className="mb-5 flex items-center gap-2 text-sm text-[#0f172a]">
+                  <input
+                    type="checkbox"
+                    checked={showSavedOnly}
+                    onChange={(event) => setShowSavedOnly(event.target.checked)}
+                    className="h-4 w-4 rounded border-[#94a3b8] accent-[#f79009]"
+                  />
+                  <Heart className={`h-3.5 w-3.5 ${showSavedOnly ? "fill-[#f79009] text-[#f79009]" : "text-[#64748b]"}`} />
+                  Saved only
                 </label>
 
                 <FilterBlock title="Audience Type">
@@ -371,27 +407,6 @@ export default function SponsorDiscoverClient({
                 </div>
               </div>
             </div>
-
-            <section className="mb-6">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#0f172a]">
-                <Star className="h-4 w-4 text-[#f79009]" />
-                Recommended for you
-              </h3>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {recommendedCreators.map((creator) => (
-                  <Link
-                    key={creator.id}
-                    href={`/sponsor/discover?creator=${creator.id}`}
-                    className="w-[190px] shrink-0 rounded-lg border border-[#d9e2ef] bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.06)] transition hover:shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
-                  >
-                    <div className="mb-2 text-2xl">{creator.logo}</div>
-                    <p className="truncate text-sm font-bold text-[#0f172a]">{creator.name}</p>
-                    <p className="text-xs text-[#64748b]">{creator.location}</p>
-                    <Match score={creator.matchScore} className="mt-3" />
-                  </Link>
-                ))}
-              </div>
-            </section>
 
             {viewMode === "grid" ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -487,12 +502,11 @@ function CreatorCard({
             {creator.category}
           </span>
         </div>
-        <div className="mb-3 flex items-center justify-between text-xs">
+        <div className="mb-3 flex items-center text-xs">
           <span className="inline-flex items-center gap-1 text-[#64748b]">
             <Users className="h-3 w-3" />
             {creator.audienceSize.toLocaleString()}
           </span>
-          <Match score={creator.matchScore} />
         </div>
         <div className="mb-4 flex flex-wrap gap-1.5">
           {creator.interests.slice(0, 3).map((interest) => (
@@ -506,7 +520,7 @@ function CreatorCard({
             {firstPackage(creator) ? `From $${firstPackage(creator)?.price.toLocaleString()}` : "No public package"}
           </span>
           <Link
-            href={`/sponsor/discover?creator=${creator.id}`}
+            href={`/sponsor/discover/${creator.id}`}
             className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
           >
             View Profile
@@ -543,24 +557,15 @@ function CreatorListItem({
           <span>{firstPackage(creator) ? `From $${firstPackage(creator)?.price.toLocaleString()}` : "No public package"}</span>
         </div>
       </div>
-      <Match score={creator.matchScore} />
       <button type="button" onClick={onToggleSave} className="p-2 text-[#64748b]" aria-label="Save creator">
         <Heart className={`h-4 w-4 ${isSaved ? "fill-[#f79009] text-[#f79009]" : ""}`} />
       </button>
       <Link
-        href={`/sponsor/discover?creator=${creator.id}`}
+        href={`/sponsor/discover/${creator.id}`}
         className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
       >
         View
       </Link>
     </article>
-  );
-}
-
-function Match({ score, className = "" }: { score: number; className?: string }) {
-  return (
-    <span className={`inline-flex w-fit rounded-full border border-[#ffd59b] bg-[#fff2dd] px-2.5 py-1 text-[11px] font-bold text-[#f79009] ${className}`}>
-      {score}% match
-    </span>
   );
 }

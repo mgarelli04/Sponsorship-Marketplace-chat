@@ -2,18 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "sponsorSavedCreators";
-
-function readSavedCount() {
-  if (typeof window === "undefined") {
-    return 0;
-  }
-
+function readHistoryCount() {
+  if (typeof window === "undefined") return 0;
   try {
-    const rawSaved = window.localStorage.getItem(STORAGE_KEY);
-    const parsed = rawSaved ? (JSON.parse(rawSaved) as string[]) : [];
+    const raw = window.localStorage.getItem("sponsorRecentlyViewed");
+    const parsed = raw ? (JSON.parse(raw) as string[]) : [];
     return parsed.length;
   } catch {
     return 0;
@@ -21,23 +17,26 @@ function readSavedCount() {
 }
 
 export default function SponsorHeader() {
+  const { data: session } = useSession();
   const pathname = usePathname();
-  const [savedCount, setSavedCount] = useState(0);
+  const [historyCount, setHistoryCount] = useState(0);
   const isDiscoverRoute = pathname === "/sponsor/discover";
-  const isSavedRoute = pathname === "/sponsor/saved";
+  const isHistoryRoute = pathname === "/sponsor/history";
 
   useEffect(() => {
-    const syncSavedCount = () => setSavedCount(readSavedCount());
+    const syncCount = () => setHistoryCount(readHistoryCount());
 
-    syncSavedCount();
-    window.addEventListener("sponsor-saved-updated", syncSavedCount);
-    window.addEventListener("storage", syncSavedCount);
+    syncCount();
+    window.addEventListener("storage", syncCount);
 
     return () => {
-      window.removeEventListener("sponsor-saved-updated", syncSavedCount);
-      window.removeEventListener("storage", syncSavedCount);
+      window.removeEventListener("storage", syncCount);
     };
   }, []);
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/login" });
+  };
 
   if (pathname === "/sponsor/login" || pathname === "/sponsor/register") {
     return null;
@@ -62,10 +61,10 @@ export default function SponsorHeader() {
               Discover
             </Link>
             <Link
-              className={isSavedRoute ? "text-[#111827]" : "text-[#4f5f79] transition hover:text-[#111827]"}
-              href="/sponsor/saved"
+              className={isHistoryRoute ? "text-[#111827]" : "text-[#4f5f79] transition hover:text-[#111827]"}
+              href="/sponsor/history"
             >
-              Saved ({savedCount})
+              History
             </Link>
           </div>
         </div>
@@ -78,15 +77,24 @@ export default function SponsorHeader() {
             Discover
           </Link>
           <Link
-            className={isSavedRoute ? "text-sm font-medium text-[#1f2a44]" : "text-sm font-medium text-[#4f5f79]"}
-            href="/sponsor/saved"
+            className={isHistoryRoute ? "text-sm font-medium text-[#1f2a44]" : "text-sm font-medium text-[#4f5f79]"}
+            href="/sponsor/history"
           >
-            Saved ({savedCount})
+            History ({historyCount})
           </Link>
         </div>
 
-        <div className="hidden h-7 w-7 items-center justify-center rounded-full bg-[#f3f0ff] text-xs md:flex" aria-label="Sponsor account">
-          &#127970;
+        <div className="hidden items-center gap-3 md:flex">
+          <div className="flex flex-col items-end">
+            <p className="text-xs font-semibold text-[#111827]">{session?.user?.name || "Sponsor"}</p>
+            <p className="text-[10px] text-[#6b7280]">Sponsor</p>
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="rounded-lg bg-[#f79009]/10 px-3 py-1.5 text-xs font-medium text-[#f79009] transition hover:bg-[#f79009]/20"
+          >
+            Sign Out
+          </button>
         </div>
       </div>
     </header>

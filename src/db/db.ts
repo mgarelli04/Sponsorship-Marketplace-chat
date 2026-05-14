@@ -17,7 +17,7 @@ if (!connectionString) {
 	throw new Error('Falta DATABASE_URL o SUPABASE_DATABASE_URL en el archivo .env.local.');
 }
 
-const queryClient =
+export const queryClient =
 	globalForPostgres.sponsorHubSql ??
 	postgres(connectionString, {
 		connect_timeout: 10,
