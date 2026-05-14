@@ -7,6 +7,23 @@ export class AuthApiSwagger implements SwaggerApiDefinition {
         post: {
           tags: ['Autenticacion'],
           summary: 'Registrar un nuevo usuario',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    email: { type: 'string', format: 'email', description: 'Correo electronico del usuario' },
+                    password: { type: 'string', minLength: 8, description: 'Contrasena (min. 8 caracteres)' },
+                    fullName: { type: 'string', description: 'Nombre completo del usuario' },
+                    userType: { type: 'string', enum: ['creator', 'sponsor'], description: 'Tipo de usuario' },
+                  },
+                  required: ['email', 'password', 'fullName', 'userType'],
+                },
+              },
+            },
+          },
           responses: {
             201: { description: 'Usuario creado exitosamente' },
             400: { description: 'Error de validacion' },
