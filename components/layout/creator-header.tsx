@@ -1,12 +1,11 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function CreatorHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
-  const router = useRouter();
 
   if (pathname === "/creator/login" || pathname === "/creator/register") {
     return null;
@@ -17,9 +16,8 @@ export default function CreatorHeader() {
       ? "font-semibold text-[#0f1c3f]"
       : "transition-colors hover:text-[#f79009]";
 
-  const handleSignOut = async () => {
-    await signOut({ redirect: false });
-    router.push("/login");
+  const handleSignOut = () => {
+    signOut({ callbackUrl: "/login" });
   };
 
   return (

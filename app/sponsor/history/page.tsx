@@ -1,15 +1,14 @@
-import SponsorDiscoverClient from "./discover-client";
+import SponsorHistoryClient from "./history-client";
 import { getSponsorDiscoverData } from "@/src/data/sponsor-discover-db";
 
 export const dynamic = "force-dynamic";
 
-export default async function SponsorDiscover() {
+export default async function SponsorHistory() {
   const discoverData = await getSponsorDiscoverData();
 
   return (
-    <SponsorDiscoverClient
+    <SponsorHistoryClient
       creators={discoverData.creators}
-      categories={discoverData.categories}
       sourceStatus={discoverData.sourceStatus}
       sourceMessage={discoverData.sourceMessage}
     />
