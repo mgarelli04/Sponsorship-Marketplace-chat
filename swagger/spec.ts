@@ -19,12 +19,7 @@ const options: swaggerJsdoc.Options = {
       version: '1.0.0',
       description: 'Documentacion OpenAPI centralizada en clases por API.',
     },
-    servers: [
-      {
-        url: `http://localhost:${process.env.PORT || 3000}`,
-        description: 'Servidor local',
-      },
-    ],
+    servers: [{ url: `http://localhost:${process.env.PORT || 3000}`, description: 'Servidor local' }],
     tags: buildTags(),
     paths: buildPaths(),
   },
