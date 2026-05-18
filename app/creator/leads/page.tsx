@@ -1,8 +1,8 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/src/auth/options";
-import { and, desc, eq } from "drizzle-orm";
-import { creators, packages, profiles, sponsorCompanies, sponsorshipInquiries } from "@/src/db/schema";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "text-[#f79009]" },
@@ -32,46 +32,82 @@ function formatBudget(min: string | null, max: string | null) {
   return "Custom budget";
 }
 
-export default async function CreatorLeadsPage() {
-  const session = await getServerSession(authOptions);
+interface Lead {
+  id: string;
+  status: string;
+  campaignGoal: string;
+  budgetMin: string | null;
+  budgetMax: string | null;
+  currencyCode: string;
+  requirementsText: string;
+  createdAt: string;
+  sponsorName: string | null;
+  sponsorIndustry: string | null;
+  packageType: string | null;
+}
 
-  if (!session?.user?.id || session.user.role !== "creator") {
-    redirect("/creator/login");
+export default function CreatorLeadsPage() {
+  const { data: session, status } = useSession();
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      redirect("/creator/login");
+    }
+  }, [status]);
+
+  useEffect(() => {
+    if (status === "authenticated" && session?.user?.role === "creator") {
+      fetch("/api/creator/leads")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch leads");
+          return res.json();
+        })
+        .then((data) => {
+          setLeads(data.leads);
+          setLoading(false);
+        })
+        .catch((err) => {
+          setError(err.message);
+          setLoading(false);
+        });
+    }
+  }, [session, status]);
+
+  if (status === "loading" || loading) {
+    return (
+      <main className="min-h-screen bg-[#f5f6f8]">
+        <div className="mx-auto max-w-7xl px-6 py-12 text-[#6b7e9e]">
+          Loading leads...
+        </div>
+      </main>
+    );
   }
 
-  const { db } = await import("@/src/db/db");
-
-  const [creatorRow] = await db
-    .select()
-    .from(creators)
-    .where(eq(creators.createdByUserId, session.user.id))
-    .limit(1);
-
-  if (!creatorRow) {
-    redirect("/creator/login");
+  if (session?.user?.role !== "creator") {
+    return null;
   }
 
-  const inquiryRows = await db
-    .select({
-      inquiry: sponsorshipInquiries,
-      sponsor: sponsorCompanies,
-      package: packages,
-    })
-    .from(sponsorshipInquiries)
-    .leftJoin(sponsorCompanies, eq(sponsorshipInquiries.sponsorCompanyId, sponsorCompanies.id))
-    .leftJoin(packages, eq(sponsorshipInquiries.packageId, packages.id))
-    .where(eq(sponsorshipInquiries.creatorId, creatorRow.id))
-    .orderBy(desc(sponsorshipInquiries.createdAt));
+  if (error) {
+    return (
+      <main className="min-h-screen bg-[#f5f6f8]">
+        <div className="mx-auto max-w-7xl px-6 py-12">
+          <p className="text-red-500">Error: {error}</p>
+        </div>
+      </main>
+    );
+  }
 
-  const grouped: Record<string, typeof inquiryRows> = {};
-  for (const row of inquiryRows) {
-    const status = row.inquiry.status;
-    if (!grouped[status]) grouped[status] = [];
-    grouped[status].push(row);
+  const grouped: Record<string, Lead[]> = {};
+  for (const lead of leads) {
+    if (!grouped[lead.status]) grouped[lead.status] = [];
+    grouped[lead.status].push(lead);
   }
 
   const statusOrder = ["pending", "negotiating", "closed_won", "closed_lost"];
-  const totalLeads = inquiryRows.length;
+  const totalLeads = leads.length;
 
   return (
     <main className="min-h-screen bg-[#f5f6f8]">
@@ -90,7 +126,7 @@ export default async function CreatorLeadsPage() {
               <section key={status}>
                 <div className="mb-4 flex items-center justify-between">
                   <div className={`flex items-center gap-2 ${statusInfo.color}`}>
-                    <span>◔</span>
+                    <span>&#x25D4;</span>
                     <h2 className="text-lg font-semibold">{statusInfo.label}</h2>
                   </div>
                   <span className="rounded-full border border-[#d9e0eb] px-3 py-1 text-sm font-semibold text-[#0f1c3f]">
@@ -99,31 +135,31 @@ export default async function CreatorLeadsPage() {
                 </div>
                 <div className="space-y-4">
                   {rows.length > 0 ? (
-                    rows.map(({ inquiry, sponsor, package: pkg }) => (
-                      <article key={inquiry.id} className="rounded-2xl border border-[#d9e0eb] bg-white p-5 shadow-sm">
+                    rows.map((lead) => (
+                      <article key={lead.id} className="rounded-2xl border border-[#d9e0eb] bg-white p-5 shadow-sm">
                         <div className="mb-4 flex items-center gap-3">
                           <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#f3f5f9] text-lg font-bold text-[#f79009]">
-                            {(sponsor?.name ?? "S").slice(0, 1)}
+                            {(lead.sponsorName ?? "S").slice(0, 1)}
                           </div>
                           <div>
-                            <h3 className="font-semibold text-[#0f1c3f]">{sponsor?.name ?? "Unknown Sponsor"}</h3>
-                            <p className="text-sm text-[#6b7e9e]">{sponsor?.industry ?? ""}</p>
+                            <h3 className="font-semibold text-[#0f1c3f]">{lead.sponsorName ?? "Unknown Sponsor"}</h3>
+                            <p className="text-sm text-[#6b7e9e]">{lead.sponsorIndustry ?? ""}</p>
                           </div>
                         </div>
                         <div className="space-y-2 text-sm text-[#5f7190]">
-                          <p>◎ {GOAL_LABELS[inquiry.campaignGoal] ?? inquiry.campaignGoal}</p>
-                          <p>{formatBudget(inquiry.budgetMin, inquiry.budgetMax)}</p>
-                          <p>📅 {new Date(inquiry.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</p>
+                          <p>{GOAL_LABELS[lead.campaignGoal] ?? lead.campaignGoal}</p>
+                          <p>{formatBudget(lead.budgetMin, lead.budgetMax)}</p>
+                          <p>{new Date(lead.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</p>
                         </div>
-                        {pkg && (
+                        {lead.packageType && (
                           <div className="mt-4 inline-flex rounded-full border border-[#d9e0eb] px-3 py-1 text-sm font-semibold text-[#0f1c3f]">
-                            {pkg.packageType.charAt(0).toUpperCase() + pkg.packageType.slice(1)}
+                            {lead.packageType.charAt(0).toUpperCase() + lead.packageType.slice(1)}
                           </div>
                         )}
-                        {inquiry.requirementsText && inquiry.requirementsText !== "No specific requirements provided." && (
+                        {lead.requirementsText && lead.requirementsText !== "No specific requirements provided." && (
                           <div className="mt-3 rounded-lg bg-[#f8f9fb] p-3">
                             <p className="text-xs font-semibold text-[#0f1c3f]">Requirements</p>
-                            <p className="mt-1 text-xs text-[#6b7e9e]">{inquiry.requirementsText}</p>
+                            <p className="mt-1 text-xs text-[#6b7e9e]">{lead.requirementsText}</p>
                           </div>
                         )}
                       </article>
