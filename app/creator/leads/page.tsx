@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: "Pending", color: "text-[#f79009]" },
@@ -47,6 +47,7 @@ interface Lead {
 }
 
 export default function CreatorLeadsPage() {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,9 +55,9 @@ export default function CreatorLeadsPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      redirect("/creator/login");
+      router.push("/creator/login");
     }
-  }, [status]);
+  }, [status, router]);
 
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role === "creator") {
