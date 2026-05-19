@@ -63,6 +63,39 @@ const BUDGET_OPTIONS = [
   { value: "100000+", label: "$100K+", min: "100000", max: "" },
 ] as const;
 
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function InsightBars({ items, emptyLabel }: { items: { label: string; value: number }[]; emptyLabel: string }) {
+  if (items.length === 0) {
+    return <span className="text-xs text-[#94a3b8]">{emptyLabel}</span>;
+  }
+
+  return (
+    <div className="space-y-3">
+      {items.map((item) => {
+        const percent = clampPercent(item.value);
+
+        return (
+          <div key={item.label}>
+            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
+              <span className="truncate text-[#0f172a]" title={item.label}>{item.label}</span>
+              <span className="shrink-0 font-medium text-[#64748b]">{percent}%</span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[#edf2f7]">
+              <div
+                className="h-full rounded-full bg-linear-to-r from-[#f79009] to-[#f97316]"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CreatorProfileClient({ data }: { data: CreatorProfileData }) {
   const { data: session, status } = useSession();
   const savedIds = useSyncExternalStore(subscribeToSaved, readSaved, () => EMPTY_SAVED);
@@ -246,58 +279,28 @@ export default function CreatorProfileClient({ data }: { data: CreatorProfileDat
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <p className="mb-2 text-xs font-semibold text-[#0f172a]">Age Distribution</p>
-                <div className="space-y-2">
-                  {data.demographics.ageGroups.map((group) => (
-                    <div key={group.label}>
-                      <div className="mb-0.5 flex justify-between text-xs">
-                        <span className="text-[#0f172a]">{group.label}</span>
-                        <span className="text-[#64748b]">{group.value}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#edf2f7]">
-                        <div className="h-full rounded-full bg-[#f79009]" style={{ width: `${group.value}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <InsightBars items={data.demographics.ageGroups} emptyLabel="No age data" />
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold text-[#0f172a]">Gender</p>
-                <div className="space-y-2">
-                  {data.demographics.gender.map((g) => (
-                    <div key={g.label}>
-                      <div className="mb-0.5 flex justify-between text-xs">
-                        <span className="text-[#0f172a]">{g.label}</span>
-                        <span className="text-[#64748b]">{g.value}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#edf2f7]">
-                        <div className="h-full rounded-full bg-[#f79009]" style={{ width: `${g.value}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <InsightBars items={data.demographics.gender} emptyLabel="No gender data" />
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold text-[#0f172a]">Top Locations</p>
-                <div className="space-y-2">
-                  {data.demographics.topLocations.map((loc) => (
-                    <div key={loc.city}>
-                      <div className="mb-0.5 flex justify-between text-xs">
-                        <span className="text-[#0f172a]">{loc.city}</span>
-                        <span className="text-[#64748b]">{loc.percentage}%</span>
-                      </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#edf2f7]">
-                        <div className="h-full rounded-full bg-[#f79009]" style={{ width: `${loc.percentage}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <InsightBars
+                  items={data.demographics.topLocations.map((loc) => ({
+                    label: loc.city,
+                    value: loc.percentage,
+                  }))}
+                  emptyLabel="No location data"
+                />
               </div>
               <div>
                 <p className="mb-2 text-xs font-semibold text-[#0f172a]">Interests</p>
                 <div className="flex flex-wrap gap-1.5">
                   {data.creator.interests.length > 0 ? (
                     data.creator.interests.map((interest) => (
-                      <span key={interest} className="rounded-full border border-[#d9e2ef] bg-white px-2 py-0.5 text-[10px] font-medium text-[#64748b]">
+                      <span key={interest} className="rounded-full border border-[#d9e2ef] bg-[#f8fafc] px-2 py-0.5 text-[10px] font-medium text-[#475569]">
                         {interest}
                       </span>
                     ))
