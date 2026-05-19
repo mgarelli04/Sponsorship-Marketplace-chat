@@ -21,6 +21,52 @@ function normalizePackageTier(value: string): CreatorPackage["tier"] {
   return "Bronze";
 }
 
+function normalizePercent(value: unknown) {
+  const parsed = toNumber(value);
+  return Math.max(0, Math.min(100, Math.round(parsed)));
+}
+
+function normalizeBreakdown(
+  value: unknown,
+  labelKeys: string[],
+  valueKeys: string[],
+): { label: string; value: number }[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const label = labelKeys
+        .map((key) => record[key])
+        .find((candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0);
+      const percent = valueKeys
+        .map((key) => record[key])
+        .find((candidate) => candidate !== undefined && candidate !== null);
+
+      if (!label) return null;
+
+      return {
+        label,
+        value: normalizePercent(percent),
+      };
+    })
+    .filter((item): item is { label: string; value: number } => item !== null);
+}
+
+function normalizeInterests(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  }
+
+  if (!value || typeof value !== "object") return [];
+
+  const interests = (value as { interests?: unknown }).interests;
+  return Array.isArray(interests)
+    ? interests.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
 export type PastSponsorCampaign = {
   sponsorName: string;
   logoUrl: string;
@@ -119,6 +165,8 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfileData 
       : 0;
     const verified = creatorRow.verificationStatus === "verified";
     const audienceSize = snapshotRows[0]?.totalAttendees ?? eventAudience;
+    const latestSnapshot = snapshotRows[0] ?? null;
+    const snapshotInterests = normalizeInterests(latestSnapshot?.interestsJsonb);
 
     const profileCreator: MarketplaceCreator = {
       id: creatorRow.id,
@@ -138,17 +186,31 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfileData 
       responseTimeHours: creatorRow.responseTimeHours ?? 48,
       lastUpdated: creatorRow.updatedAt.toISOString().slice(0, 10),
       previousSponsors: pastSponsorRows.map((s) => s.sponsorName),
-      interests: [],
+      interests: snapshotInterests,
       audienceTypes: [],
       packages: creatorPackages,
     };
 
-    const latestSnapshot = snapshotRows[0] ?? null;
     const demographics = latestSnapshot
       ? {
-          ageGroups: (latestSnapshot.demographicsJsonb as { ageGroups?: { label: string; value: number }[] })?.ageGroups ?? [],
-          gender: (latestSnapshot.demographicsJsonb as { gender?: { label: string; value: number }[] })?.gender ?? [],
-          topLocations: (latestSnapshot.topLocationsJsonb as { locations?: { city: string; percentage: number }[] })?.locations ?? [],
+          ageGroups: normalizeBreakdown(
+            (latestSnapshot.demographicsJsonb as { ageGroups?: unknown })?.ageGroups,
+            ["label", "name", "age"],
+            ["value", "percentage", "pct"],
+          ),
+          gender: normalizeBreakdown(
+            (latestSnapshot.demographicsJsonb as { gender?: unknown })?.gender,
+            ["label", "name", "gender"],
+            ["value", "percentage", "pct"],
+          ),
+          topLocations: normalizeBreakdown(
+            (latestSnapshot.topLocationsJsonb as { locations?: unknown })?.locations,
+            ["city", "label", "name"],
+            ["percentage", "pct", "value"],
+          ).map((location) => ({
+            city: location.label,
+            percentage: location.value,
+          })),
         }
       : null;
 

@@ -37,14 +37,30 @@ export async function POST(request: Request) {
 
     const { db } = await import("@/src/db/db");
 
-    const [company] = await db
+    let [company] = await db
       .select()
       .from(sponsorCompanies)
       .where(eq(sponsorCompanies.createdByUserId, session.user.id))
       .limit(1);
 
     if (!company) {
-      return NextResponse.json({ error: "No sponsor company found for this user" }, { status: 400 });
+      const sponsorName = session.user.name?.trim()
+        || session.user.email?.split("@")[0]?.trim()
+        || "Sponsor";
+
+      [company] = await db
+        .insert(sponsorCompanies)
+        .values({
+          name: `${sponsorName} Company`,
+          slug: `sponsor-${session.user.id}`,
+          websiteUrl: "",
+          linkedinUrl: "",
+          description: "Auto-created sponsor company profile.",
+          industry: "General",
+          verificationStatus: "unverified",
+          createdByUserId: session.user.id,
+        })
+        .returning();
     }
 
     const [inquiry] = await db
