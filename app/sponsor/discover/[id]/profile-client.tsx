@@ -63,38 +63,7 @@ const BUDGET_OPTIONS = [
   { value: "100000+", label: "$100K+", min: "100000", max: "" },
 ] as const;
 
-function clampPercent(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)));
-}
-
-function InsightBars({ items, emptyLabel }: { items: { label: string; value: number }[]; emptyLabel: string }) {
-  if (items.length === 0) {
-    return <span className="text-xs text-[#94a3b8]">{emptyLabel}</span>;
-  }
-
-  return (
-    <div className="space-y-3">
-      {items.map((item) => {
-        const percent = clampPercent(item.value);
-
-        return (
-          <div key={item.label}>
-            <div className="mb-1 flex items-center justify-between gap-3 text-xs">
-              <span className="truncate text-[#0f172a]" title={item.label}>{item.label}</span>
-              <span className="shrink-0 font-medium text-[#64748b]">{percent}%</span>
-            </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#edf2f7]">
-              <div
-                className="h-full rounded-full bg-linear-to-r from-[#f79009] to-[#f97316]"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+// Simplified: removed detailed demographics visualizations to keep profile focused and verifiable.
 
 export default function CreatorProfileClient({ data }: { data: CreatorProfileData }) {
   const { data: session, status } = useSession();
@@ -268,50 +237,7 @@ export default function CreatorProfileClient({ data }: { data: CreatorProfileDat
           <KpiCard label="Events" value={data.events.length.toString()} sub="total events" />
         </div>
 
-        {data.demographics && (
-          <section className="mb-6 rounded-xl border border-[#d9e2ef] bg-white p-6 shadow-[0_2px_10px_rgba(15,23,42,0.06)]">
-            <div className="mb-4 flex items-center gap-2">
-              <h2 className="text-base font-bold text-[#0f172a]">Audience Insights</h2>
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">
-                <Shield className="h-3 w-3" /> Verified
-              </span>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="mb-2 text-xs font-semibold text-[#0f172a]">Age Distribution</p>
-                <InsightBars items={data.demographics.ageGroups} emptyLabel="No age data" />
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold text-[#0f172a]">Gender</p>
-                <InsightBars items={data.demographics.gender} emptyLabel="No gender data" />
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold text-[#0f172a]">Top Locations</p>
-                <InsightBars
-                  items={data.demographics.topLocations.map((loc) => ({
-                    label: loc.city,
-                    value: loc.percentage,
-                  }))}
-                  emptyLabel="No location data"
-                />
-              </div>
-              <div>
-                <p className="mb-2 text-xs font-semibold text-[#0f172a]">Interests</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {data.creator.interests.length > 0 ? (
-                    data.creator.interests.map((interest) => (
-                      <span key={interest} className="rounded-full border border-[#d9e2ef] bg-[#f8fafc] px-2 py-0.5 text-[10px] font-medium text-[#475569]">
-                        {interest}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-xs text-[#94a3b8]">No data</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
+        {/* Audience insights removed to reduce unverifiable complexity; keep KPIs and packages instead. */}
 
         <section className="mb-6">
           <h2 className="mb-3 text-base font-bold text-[#0f172a]">Sponsorship Packages</h2>
