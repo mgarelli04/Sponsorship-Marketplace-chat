@@ -58,7 +58,7 @@ export default function SiteHeader() {
                   return (
                     <Link
                       href="/creator/dashboard"
-                      className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507]"
+                      className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507] cursor-pointer"
                     >
                       Ir a Creator
                     </Link>
@@ -69,7 +69,7 @@ export default function SiteHeader() {
                   return (
                     <Link
                       href="/sponsor/discover"
-                      className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507]"
+                      className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507] cursor-pointer"
                     >
                       Ir a Sponsor
                     </Link>
@@ -79,7 +79,7 @@ export default function SiteHeader() {
                 return (
                   <Link
                     href="/"
-                    className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507]"
+                    className="rounded-xl bg-[#f79009] px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#e88507] cursor-pointer"
                   >
                     Ir a inicio
                   </Link>
