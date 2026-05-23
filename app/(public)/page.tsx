@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <div className="bg-[#f4f5f7] text-[#0f1c3f]">
@@ -20,20 +22,20 @@ export default function Home() {
             </p>
 
             <div className="mt-10 flex w-full max-w-xl flex-col gap-4 sm:flex-row sm:justify-center">
-              <a
+              <Link
+                href="/creator/register"
                 className="inline-flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#0b173b] px-8 text-base font-semibold text-white shadow-md shadow-[#0b173b]/10 transition hover:bg-[#101f4f]"
-                href="#"
               >
                 Build my media kit
                 <span aria-hidden="true">→</span>
-              </a>
-              <a
+              </Link>
+              <Link
+                href="/sponsor/discover"
                 className="inline-flex h-14 items-center justify-center gap-3 rounded-2xl border border-[#cad3e2] bg-[#f7f8fa] px-8 text-base font-semibold text-[#22345b] transition hover:bg-white"
-                href="#"
               >
                 Explore creators
                 <span aria-hidden="true">→</span>
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -218,18 +220,18 @@ export default function Home() {
               </p>
 
               <div className="mt-9 flex flex-col items-center justify-center gap-4 sm:flex-row">
-                <a
+                <Link
+                  href="/creator/register"
                   className="inline-flex h-12 min-w-44 items-center justify-center rounded-xl bg-[#f79009] px-6 text-base font-semibold text-white transition hover:bg-[#e88507]"
-                  href="#"
                 >
                   I&apos;m a Creator
-                </a>
-                <a
+                </Link>
+                <Link
+                  href="/sponsor/register"
                   className="inline-flex h-12 min-w-44 items-center justify-center rounded-xl bg-white px-6 text-base font-semibold text-[#0b173b] transition hover:bg-[#eef2f8]"
-                  href="#"
                 >
                   I&apos;m a Sponsor
-                </a>
+                </Link>
               </div>
             </div>
           </div>
