@@ -59,87 +59,82 @@ export default async function CreatorDashboard() {
           </p>
         </div>
 
-        <div className="mb-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
-            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
-              {numberFormatter.format(data.stats.totalAudience)}
-            </p>
-            <p className="text-sm text-[#6b7e9e]">Verified Audience</p>
-          </div>
-
-          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
-            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
-              {data.stats.activeLeads}
-            </p>
-            <p className="text-sm text-[#6b7e9e]">Active Leads</p>
-          </div>
-
-          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
-            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
-              {data.stats.closedDeals}
-            </p>
-            <p className="text-sm text-[#6b7e9e]">
-              Deals Closed
-              {data.stats.revenueWon > 0 ? ` - ${currencyFormatter.format(data.stats.revenueWon)}` : ""}
-            </p>
-          </div>
-
-          <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
-            <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
-              {data.stats.mediaKitScore}%
-            </p>
-            <p className="text-sm text-[#6b7e9e]">Media Kit Score</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-3 items-start">
           <div className="lg:col-span-2">
-            <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-[#0f1c3f]">Recent Inquiries</h2>
-              <Link
-                href="/creator/leads"
-                className="text-sm font-medium text-[#0a66c2] hover:underline"
-              >
-                View all
-              </Link>
+            <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+                <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+                  {numberFormatter.format(data.stats.totalAudience)}
+                </p>
+                <p className="text-sm text-[#6b7e9e]">Verified Audience</p>
+              </div>
+
+              <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+                <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+                  {data.stats.activeLeads}
+                </p>
+                <p className="text-sm text-[#6b7e9e]">Active Leads</p>
+              </div>
+
+              <div className="rounded-lg border border-[#d9e0eb] bg-white p-6">
+                <p className="mb-1 text-4xl font-bold text-[#0f1c3f]">
+                  {data.stats.closedDeals}
+                </p>
+                <p className="text-sm text-[#6b7e9e]">
+                  Deals Closed
+                  {data.stats.revenueWon > 0 ? ` - ${currencyFormatter.format(data.stats.revenueWon)}` : ""}
+                </p>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              {data.recentInquiries.length > 0 ? (
-                data.recentInquiries.map(({ inquiry, sponsor, package: selectedPackage }) => (
-                  <article
-                    key={inquiry.id}
-                    className="flex items-center gap-4 rounded-lg border border-[#d9e0eb] bg-white p-5 transition hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)]"
-                  >
-                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-lg font-bold text-[#0a66c2]">
-                      {(sponsor?.name || "S").slice(0, 1)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="mb-1 font-semibold text-[#0f1c3f]">
-                        {sponsor?.name || "Sponsor"}
-                      </h3>
-                      <p className="truncate text-sm text-[#6b7e9e]">
-                        {selectedPackage?.name || "Custom inquiry"} - {statusLabel(inquiry.campaignGoal)}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span className="rounded-full bg-[#fff3e2] px-3 py-1 text-xs font-medium text-[#f79009]">
-                        {statusLabel(inquiry.status)}
-                      </span>
-                      <span className="hidden whitespace-nowrap text-sm text-[#6b7e9e] sm:inline">
-                        {formatDate(inquiry.createdAt)}
-                      </span>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <div className="rounded-lg border border-dashed border-[#cfd8e6] bg-white p-8">
-                  <h3 className="font-semibold text-[#0f1c3f]">No inquiries yet</h3>
-                  <p className="mt-2 text-sm text-[#6b7e9e]">
-                    Publish your media kit and add sponsorship packages to make this pipeline useful.
-                  </p>
-                </div>
-              )}
+            <div>
+              <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-[#0f1c3f]">Recent Inquiries</h2>
+                <Link
+                  href="/creator/leads"
+                  className="text-sm font-medium text-[#0a66c2] hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
+
+              <div className="space-y-4">
+                {data.recentInquiries.length > 0 ? (
+                  data.recentInquiries.map(({ inquiry, sponsor, package: selectedPackage }) => (
+                    <article
+                      key={inquiry.id}
+                      className="flex items-center gap-4 rounded-lg border border-[#d9e0eb] bg-white p-5 transition hover:shadow-[0_4px_12px_rgba(18,34,72,0.06)]"
+                    >
+                      <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-[#eef5ff] text-lg font-bold text-[#0a66c2]">
+                        {(sponsor?.name || "S").slice(0, 1)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="mb-1 font-semibold text-[#0f1c3f]">
+                          {sponsor?.name || "Sponsor"}
+                        </h3>
+                        <p className="truncate text-sm text-[#6b7e9e]">
+                          {selectedPackage?.name || "Custom inquiry"} - {statusLabel(inquiry.campaignGoal)}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="rounded-full bg-[#fff3e2] px-3 py-1 text-xs font-medium text-[#f79009]">
+                          {statusLabel(inquiry.status)}
+                        </span>
+                        <span className="hidden whitespace-nowrap text-sm text-[#6b7e9e] sm:inline">
+                          {formatDate(inquiry.createdAt)}
+                        </span>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-[#cfd8e6] bg-white p-8">
+                    <h3 className="font-semibold text-[#0f1c3f]">No inquiries yet</h3>
+                    <p className="mt-2 text-sm text-[#6b7e9e]">
+                      Publish your media kit and add sponsorship packages to make this pipeline useful.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
