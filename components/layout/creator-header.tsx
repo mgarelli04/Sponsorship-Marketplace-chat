@@ -1,20 +1,29 @@
 "use client";
 
+import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+const navItems = [
+  { href: "/creator/dashboard", label: "Dashboard" },
+  { href: "/creator/media-kit", label: "Media Kit" },
+  { href: "/creator/events", label: "Events" },
+  { href: "/creator/leads", label: "Leads" },
+];
 
 export default function CreatorHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   if (pathname === "/creator/login" || pathname === "/creator/register") {
     return null;
   }
 
-  const navLinkClass = (href: string) =>
+  const navButtonClass = (href: string) =>
     pathname === href
-      ? "font-semibold text-[#0f1c3f]"
-      : "transition-colors hover:text-[#f79009]";
+      ? "cursor-pointer font-semibold text-[#0f1c3f]"
+      : "cursor-pointer transition-colors hover:text-[#f79009]";
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/login" });
@@ -23,21 +32,22 @@ export default function CreatorHeader() {
   return (
     <header className="border-b border-[#e2e7ef] bg-white">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4 md:px-10">
-        <a className="flex items-center gap-3" href="/" aria-label="SponsorHub home">
+        <Link className="flex items-center gap-3" href="/" aria-label="SponsorHub home">
           <span className="grid h-8 w-8 place-items-center rounded-xl bg-[#f79009] font-bold text-white">s</span>
           <span className="text-2xl font-bold tracking-tight text-[#0f1c3f]">SponsorHub</span>
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-[#66758f] md:flex">
-          <a className={navLinkClass("/creator/dashboard")} href="/creator/dashboard">
-            Dashboard
-          </a>
-          <a className={navLinkClass("/creator/media-kit")} href="/creator/media-kit">
-            Media Kit
-          </a>
-          <a className={navLinkClass("/creator/leads")} href="/creator/leads">
-            Leads
-          </a>
+          {navItems.map((item) => (
+            <button
+              key={item.href}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className={navButtonClass(item.href)}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
 
         <div className="flex items-center gap-4">
