@@ -111,7 +111,11 @@ export async function getCreatorProfile(id: string): Promise<CreatorProfileData 
     if (!creatorRow) return null;
 
     const [eventRows, packageRows, pastSponsorRows, snapshotRows] = await Promise.all([
-      db.select().from(events).where(eq(events.creatorId, id)).limit(20),
+      db
+        .select()
+        .from(events)
+        .where(and(eq(events.creatorId, id), inArray(events.eventStatus, ["upcoming", "past"])))
+        .limit(20),
       db
         .select()
         .from(packages)

@@ -152,7 +152,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
           checkinsCount: events.checkinsCount,
         })
         .from(events)
-        .where(inArray(events.creatorId, creatorIds)),
+        .where(and(inArray(events.creatorId, creatorIds), inArray(events.eventStatus, ["upcoming", "past"]))),
       db
         .select({
           creatorId: creatorPastSponsors.creatorId,

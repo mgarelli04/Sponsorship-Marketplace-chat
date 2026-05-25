@@ -166,6 +166,28 @@ export default async function CreatorDashboard() {
               </div>
             </Link>
 
+            <Link
+              href="/creator/events"
+              className="group block rounded-2xl border border-[#d9e0eb] bg-white p-5 transition hover:-translate-y-0.5 hover:border-[#cfd8e6] hover:bg-[#fbfcfe] hover:shadow-[0_10px_24px_rgba(18,34,72,0.08)]"
+            >
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eef5ff] text-lg font-bold text-[#0a66c2]">
+                  EV
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="font-semibold text-[#0f1c3f]">Manage Events</h3>
+                    <span className="text-sm font-semibold text-[#0a66c2] group-hover:underline">
+                      Open
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-[#6b7e9e]">
+                    Create and update the events shown in your sponsor-facing profile.
+                  </p>
+                </div>
+              </div>
+            </Link>
+
             <div className="rounded-2xl border border-[#d9e0eb] bg-white p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-[#0f1c3f]">Profile Completeness</h3>
@@ -185,7 +207,12 @@ export default async function CreatorDashboard() {
             </div>
 
             <div className="rounded-2xl border border-[#d9e0eb] bg-white p-5">
-              <h3 className="font-semibold text-[#0f1c3f]">Recent Events</h3>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-[#0f1c3f]">Recent Events</h3>
+                <Link href="/creator/events" className="text-xs font-semibold text-[#0a66c2] hover:underline">
+                  Manage
+                </Link>
+              </div>
               <div className="mt-4 space-y-3">
                 {data.recentEvents.length > 0 ? (
                   data.recentEvents.slice(0, 3).map((event) => (
