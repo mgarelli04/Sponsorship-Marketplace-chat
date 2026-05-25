@@ -69,3 +69,36 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const creatorSession = await getCreatorSession();
+
+    if (!creatorSession) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const creator = await ensureCreatorForUser(creatorSession);
+    const [deletedEvent] = await db
+      .delete(events)
+      .where(and(eq(events.id, id), eq(events.creatorId, creator.id)))
+      .returning({ id: events.id });
+
+    if (!deletedEvent) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    await touchCreatorEventContent(creator.id);
+
+    return NextResponse.json({ id: deletedEvent.id });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Internal server error" },
+      { status: 500 },
+    );
+  }
+}

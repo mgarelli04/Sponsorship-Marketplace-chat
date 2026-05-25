@@ -9,6 +9,7 @@ import {
   Pencil,
   RotateCcw,
   Save,
+  Trash2,
   Ticket,
   X,
 } from "lucide-react";
@@ -176,6 +177,8 @@ export default function CreatorEventsClient({
   const [form, setForm] = useState<EventFormState>(() => buildEmptyForm(creator));
   const [submitting, setSubmitting] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<CreatorEventView | null>(null);
   const [profileStatus, setProfileStatus] = useState(creator.profileStatus);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -221,6 +224,44 @@ export default function CreatorEventsClient({
     setForm(formFromEvent(event));
     setError(null);
     setNotice(null);
+  };
+
+  const openDeleteConfirmation = (event: CreatorEventView) => {
+    setEventToDelete(event);
+    setError(null);
+    setNotice(null);
+  };
+
+  const deleteEvent = async () => {
+    if (!eventToDelete) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch(`/api/creator/events/${eventToDelete.id}`, {
+        method: "DELETE",
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.error || "Could not delete event");
+      }
+
+      setEvents((current) => current.filter((event) => event.id !== eventToDelete.id));
+      if (form.id === eventToDelete.id) {
+        setForm(buildEmptyForm(creator));
+      }
+      setEventToDelete(null);
+      setNotice("Event deleted.");
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Could not delete event");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const publishProfile = async () => {
@@ -551,6 +592,21 @@ export default function CreatorEventsClient({
               </div>
 
               <div className="flex gap-3 pt-2">
+                {form.id ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const event = events.find((item) => item.id === form.id);
+                      if (event) {
+                        openDeleteConfirmation(event);
+                      }
+                    }}
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={resetForm}
@@ -572,6 +628,49 @@ export default function CreatorEventsClient({
           </aside>
         </div>
       </div>
+
+      {eventToDelete ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-lg border border-[#d9e0eb] bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-[#0f1c3f]">Delete event?</h2>
+                <p className="mt-2 text-sm leading-6 text-[#5f7190]">
+                  This will permanently delete <span className="font-semibold text-[#0f1c3f]">{eventToDelete.title}</span> from your creator profile and Sponsor Discover.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEventToDelete(null)}
+                className="rounded-lg p-2 text-[#66758f] transition hover:bg-[#f3f5f9] hover:text-[#0f1c3f]"
+                aria-label="Cancel delete"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEventToDelete(null)}
+                disabled={deleting}
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-[#d9e0eb] bg-white text-sm font-semibold text-[#66758f] transition hover:bg-[#f3f5f9] disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={deleteEvent}
+                disabled={deleting}
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-red-600 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleting ? "Deleting..." : "Delete event"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }
