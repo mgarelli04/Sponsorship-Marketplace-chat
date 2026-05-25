@@ -22,6 +22,7 @@ type CategoryOption = {
 
 type CreatorDefaults = {
   displayName: string;
+  profileStatus: string;
   countryCode: string;
   region: string;
   city: string;
@@ -300,6 +301,15 @@ export default function CreatorEventsClient({
             New event
           </button>
         </div>
+
+        {creator.profileStatus !== "published" ? (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+            <p className="font-semibold">This creator profile is {creator.profileStatus}.</p>
+            <p className="mt-1">
+              Sponsors only see published creator profiles in Discover. You can create and edit events here, but they will not appear in Sponsor Discover until the profile is published.
+            </p>
+          </div>
+        ) : null}
 
         <div className="mb-6 grid gap-4 md:grid-cols-3">
           <Metric icon={<CalendarDays className="h-4 w-4" />} label="Events" value={events.length.toString()} />

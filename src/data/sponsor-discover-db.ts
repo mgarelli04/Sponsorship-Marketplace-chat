@@ -148,6 +148,12 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
       db
         .select({
           creatorId: events.creatorId,
+          title: events.title,
+          description: events.description,
+          venueName: events.venueName,
+          city: events.city,
+          region: events.region,
+          countryCode: events.countryCode,
           ticketsSold: events.ticketsSold,
           checkinsCount: events.checkinsCount,
         })
@@ -232,6 +238,14 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
       const creatorPackages = packagesByCreator.get(creator.id) ?? [];
       const snapshot = latestSnapshotByCreator.get(creator.id);
       const creatorEvents = eventsByCreator.get(creator.id) ?? [];
+      const eventSearchTerms = creatorEvents.flatMap((event) => [
+        event.title,
+        event.description,
+        event.venueName,
+        event.city,
+        event.region,
+        event.countryCode,
+      ]);
       const eventAudience = creatorEvents.reduce(
         (max, event) => Math.max(max, event.ticketsSold, event.checkinsCount),
         0,
@@ -263,6 +277,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
         responseTimeHours: creator.responseTimeHours ?? 48,
         lastUpdated: creator.updatedAt.toISOString().slice(0, 10),
         previousSponsors: sponsorsByCreator.get(creator.id) ?? [],
+        eventSearchTerms,
         packages: creatorPackages,
       };
     });

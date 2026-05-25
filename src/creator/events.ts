@@ -233,6 +233,7 @@ export async function getCreatorEventsData(input: CreatorUserInput) {
     creator: {
       id: creator.id,
       displayName: creator.displayName,
+      profileStatus: creator.profileStatus,
       countryCode: creator.countryCode,
       region: creator.region,
       city: creator.city,

@@ -31,6 +31,7 @@ export type MarketplaceCreator = {
   responseTimeHours: number;
   lastUpdated: string;
   previousSponsors: string[];
+  eventSearchTerms: string[];
   packages: CreatorPackage[];
 };
 
