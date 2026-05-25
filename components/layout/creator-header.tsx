@@ -2,20 +2,28 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+
+const navItems = [
+  { href: "/creator/dashboard", label: "Dashboard" },
+  { href: "/creator/media-kit", label: "Media Kit" },
+  { href: "/creator/events", label: "Events" },
+  { href: "/creator/leads", label: "Leads" },
+];
 
 export default function CreatorHeader() {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
 
   if (pathname === "/creator/login" || pathname === "/creator/register") {
     return null;
   }
 
-  const navLinkClass = (href: string) =>
+  const navButtonClass = (href: string) =>
     pathname === href
-      ? "font-semibold text-[#0f1c3f]"
-      : "transition-colors hover:text-[#f79009]";
+      ? "cursor-pointer font-semibold text-[#0f1c3f]"
+      : "cursor-pointer transition-colors hover:text-[#f79009]";
 
   const handleSignOut = () => {
     signOut({ callbackUrl: "/login" });
@@ -30,18 +38,16 @@ export default function CreatorHeader() {
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-[#66758f] md:flex">
-          <Link className={navLinkClass("/creator/dashboard")} href="/creator/dashboard">
-            Dashboard
-          </Link>
-          <Link className={navLinkClass("/creator/media-kit")} href="/creator/media-kit">
-            Media Kit
-          </Link>
-          <Link className={navLinkClass("/creator/events")} href="/creator/events">
-            Events
-          </Link>
-          <Link className={navLinkClass("/creator/leads")} href="/creator/leads">
-            Leads
-          </Link>
+          {navItems.map((item) => (
+            <button
+              key={item.href}
+              type="button"
+              onClick={() => router.push(item.href)}
+              className={navButtonClass(item.href)}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
 
         <div className="flex items-center gap-4">
