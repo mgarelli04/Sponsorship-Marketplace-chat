@@ -73,6 +73,7 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   hour: "2-digit",
   minute: "2-digit",
 });
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 function toDatetimeLocal(value: string) {
   const date = new Date(value);
@@ -448,11 +449,11 @@ export default function CreatorEventsClient({
                             </span>
                             <span className="inline-flex items-center gap-2">
                               <Ticket className="h-4 w-4 text-[#f79009]" />
-                              {event.ticketsSold.toLocaleString()} tickets
+                              {numberFormatter.format(event.ticketsSold)} tickets
                             </span>
                             <span className="inline-flex items-center gap-2">
                               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              {event.checkinsCount.toLocaleString()} check-ins
+                              {numberFormatter.format(event.checkinsCount)} check-ins
                             </span>
                           </div>
                         </div>
