@@ -175,6 +175,8 @@ export default function CreatorEventsClient({
   const [events, setEvents] = useState(initialEvents);
   const [form, setForm] = useState<EventFormState>(() => buildEmptyForm(creator));
   const [submitting, setSubmitting] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [profileStatus, setProfileStatus] = useState(creator.profileStatus);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const formPanelRef = useRef<HTMLElement | null>(null);
@@ -219,6 +221,30 @@ export default function CreatorEventsClient({
     setForm(formFromEvent(event));
     setError(null);
     setNotice(null);
+  };
+
+  const publishProfile = async () => {
+    setPublishing(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const response = await fetch("/api/creator/profile/publish", {
+        method: "POST",
+      });
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.error || "Could not publish profile");
+      }
+
+      setProfileStatus("published");
+      setNotice("Profile published. Refresh Sponsor Discover and search again.");
+    } catch (publishError) {
+      setError(publishError instanceof Error ? publishError.message : "Could not publish profile");
+    } finally {
+      setPublishing(false);
+    }
   };
 
   const submitEvent = async (event: React.FormEvent) => {
@@ -302,12 +328,24 @@ export default function CreatorEventsClient({
           </button>
         </div>
 
-        {creator.profileStatus !== "published" ? (
+        {profileStatus !== "published" ? (
           <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-            <p className="font-semibold">This creator profile is {creator.profileStatus}.</p>
-            <p className="mt-1">
-              Sponsors only see published creator profiles in Discover. You can create and edit events here, but they will not appear in Sponsor Discover until the profile is published.
-            </p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold">This creator profile is {profileStatus}.</p>
+                <p className="mt-1">
+                  Sponsors only see published creator profiles in Discover. Publish the profile after reviewing the events you want sponsors to find.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={publishProfile}
+                disabled={publishing}
+                className="inline-flex h-10 shrink-0 items-center justify-center rounded-lg bg-[#f79009] px-4 text-sm font-semibold text-white transition hover:bg-[#e88507] disabled:opacity-60"
+              >
+                {publishing ? "Publishing..." : "Publish profile"}
+              </button>
+            </div>
           </div>
         ) : null}
 
