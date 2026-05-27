@@ -3,16 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/src/auth/options";
 import { getCreatorMediaKitData } from "@/src/creator/data";
 
-type Segment = {
-  label: string;
-  value: number;
-};
-
-type Location = {
-  city: string;
-  pct: number;
-};
-
 const numberFormatter = new Intl.NumberFormat("en-US");
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -25,95 +15,9 @@ const dateFormatter = new Intl.DateTimeFormat("en-US", {
   year: "numeric",
 });
 
-const ageColors = ["#f59e0b", "#3b82f6", "#8b5cf6", "#94a3b8"];
-
 function formatDate(value: Date | string | null) {
-  if (!value) {
-    return "No date";
-  }
-
+  if (!value) return "No date";
   return dateFormatter.format(new Date(value));
-}
-
-function readSegments(value: unknown, key: "ageGroups" | "gender") {
-  if (!value || typeof value !== "object" || !(key in value)) {
-    return [] as Segment[];
-  }
-
-  const rows = (value as Record<string, unknown>)[key];
-
-  if (!Array.isArray(rows)) {
-    return [] as Segment[];
-  }
-
-  return rows
-    .map((row) => {
-      if (!row || typeof row !== "object") {
-        return null;
-      }
-
-      const record = row as Record<string, unknown>;
-      const label = String(record.label ?? "");
-      const value = Number(record.value ?? 0);
-
-      return label && Number.isFinite(value) ? { label, value } : null;
-    })
-    .filter((row): row is Segment => Boolean(row));
-}
-
-function readLocations(value: unknown) {
-  if (!value || typeof value !== "object" || !("locations" in value)) {
-    return [] as Location[];
-  }
-
-  const rows = (value as Record<string, unknown>).locations;
-
-  if (!Array.isArray(rows)) {
-    return [] as Location[];
-  }
-
-  return rows
-    .map((row) => {
-      if (!row || typeof row !== "object") {
-        return null;
-      }
-
-      const record = row as Record<string, unknown>;
-      const city = String(record.city ?? "");
-      const pct = Number(record.pct ?? 0);
-
-      return city && Number.isFinite(pct) ? { city, pct } : null;
-    })
-    .filter((row): row is Location => Boolean(row));
-}
-
-function readInterests(value: unknown) {
-  if (!value || typeof value !== "object" || !("interests" in value)) {
-    return [] as string[];
-  }
-
-  const rows = (value as Record<string, unknown>).interests;
-
-  if (!Array.isArray(rows)) {
-    return [] as string[];
-  }
-
-  return rows.filter((row): row is string => typeof row === "string" && row.length > 0);
-}
-
-function buildConicGradient(segments: Segment[]) {
-  if (segments.length === 0) {
-    return "conic-gradient(#e5eaf2 0 100%)";
-  }
-
-  let cursor = 0;
-  const stops = segments.map((segment, index) => {
-    const start = cursor;
-    cursor += segment.value;
-    return `${ageColors[index % ageColors.length]} ${start}% ${cursor}%`;
-  });
-
-  return `conic-gradient(${stops.join(", ")})`;
 }
 
 export default async function CreatorMediaKitPage() {
@@ -135,10 +39,8 @@ export default async function CreatorMediaKitPage() {
     data.categories.find((row) => row.relation.isPrimary)?.category.name ||
     data.categories[0]?.category.name ||
     "Creator";
-  const ageSegments = readSegments(data.audienceSnapshot?.demographicsJsonb, "ageGroups");
-  const genderSegments = readSegments(data.audienceSnapshot?.demographicsJsonb, "gender");
-  const topLocations = readLocations(data.audienceSnapshot?.topLocationsJsonb);
-  const interests = readInterests(data.audienceSnapshot?.interestsJsonb);
+  const totalAudience = Number(data.audienceSnapshot?.totalAttendees ?? 0);
+  const repeatPct = data.audienceSnapshot?.repeatAttendancePct ?? 0;
 
   return (
     <main className="min-h-screen bg-[#f5f6f8]">
@@ -265,104 +167,19 @@ export default async function CreatorMediaKitPage() {
               "Audience data will appear after snapshots or integrations are added."}
           </p>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[1.1fr_1fr_1fr_1.1fr]">
-            <article>
-              <h3 className="text-base font-medium text-[#0f1c3f]">Age Distribution</h3>
-              <div className="mt-6 flex items-center justify-center">
-                <div
-                  className="h-48 w-48 rounded-full"
-                  style={{ background: buildConicGradient(ageSegments) }}
-                >
-                  <div className="m-auto mt-10 h-28 w-28 rounded-full bg-white" />
-                </div>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-[#0f1c3f]">
-                {ageSegments.length > 0 ? (
-                  ageSegments.map((segment, index) => (
-                    <span key={segment.label} className="inline-flex items-center gap-2">
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: ageColors[index % ageColors.length] }}
-                      />
-                      {segment.label}: {segment.value}%
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[#66758f]">No age data yet.</span>
-                )}
-              </div>
-            </article>
-
-            <article>
-              <h3 className="text-base font-medium text-[#0f1c3f]">Gender Split</h3>
-              <div className="mt-6 h-48 rounded-2xl border border-dashed border-[#d9e0eb] bg-[#fbfcfe] p-4">
-                {genderSegments.length > 0 ? (
-                  <div className="flex h-full items-end gap-6">
-                    {genderSegments.map((segment) => (
-                      <div key={segment.label} className="flex flex-1 flex-col items-center gap-2">
-                        <div
-                          className="w-full rounded-t-xl bg-[#f59e0b]"
-                          style={{ height: `${Math.min(segment.value, 100)}%` }}
-                        />
-                        <span className="text-sm text-[#66758f]">{segment.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="grid h-full place-items-center text-sm text-[#66758f]">
-                    No gender data yet.
-                  </div>
-                )}
-              </div>
-            </article>
-
-            <article>
-              <h3 className="text-base font-medium text-[#0f1c3f]">Top Locations</h3>
-              <div className="mt-6 space-y-4">
-                {topLocations.length > 0 ? (
-                  topLocations.map((location) => (
-                    <div key={location.city}>
-                      <div className="mb-2 flex items-center justify-between text-sm text-[#0f1c3f]">
-                        <span>{location.city}</span>
-                        <span>{location.pct}%</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-[#eef2f7]">
-                        <div
-                          className="h-2 rounded-full bg-[#f79009]"
-                          style={{ width: `${Math.min(location.pct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-[#66758f]">No location data yet.</p>
-                )}
-              </div>
-            </article>
-
-            <article>
-              <h3 className="text-base font-medium text-[#0f1c3f]">Interests</h3>
-              <div className="mt-6 flex flex-wrap gap-2">
-                {interests.length > 0 ? (
-                  interests.map((interest) => (
-                    <span
-                      key={interest}
-                      className="rounded-full border border-[#d9e0eb] bg-white px-3 py-1 text-sm font-medium text-[#0f1c3f]"
-                    >
-                      {interest}
-                    </span>
-                  ))
-                ) : (
-                  <p className="text-sm text-[#66758f]">No interest data yet.</p>
-                )}
-              </div>
-              <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-                <p className="text-3xl font-bold text-emerald-500">
-                  {data.audienceSnapshot?.repeatAttendancePct ?? "0"}%
-                </p>
-                <p className="mt-1 text-sm text-[#5f7190]">Returning Attendees</p>
-              </div>
-            </article>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-[#e5eaf2] bg-[#fbfcfe] p-5">
+              <h3 className="font-semibold text-[#0f1c3f]">Total Audience</h3>
+              <p className="mt-2 text-3xl font-bold text-[#0f1c3f]">{numberFormatter.format(totalAudience)}</p>
+            </div>
+            <div className="rounded-2xl border border-[#e5eaf2] bg-[#fbfcfe] p-5">
+              <h3 className="font-semibold text-[#0f1c3f]">Returning Attendees</h3>
+              <p className="mt-2 text-3xl font-bold text-emerald-500">{repeatPct}%</p>
+            </div>
+            <div className="rounded-2xl border border-[#e5eaf2] bg-[#fbfcfe] p-5">
+              <h3 className="font-semibold text-[#0f1c3f]">Primary Category</h3>
+              <p className="mt-2 text-lg font-medium text-[#0f1c3f]">{primaryCategory}</p>
+            </div>
           </div>
         </section>
 
@@ -403,23 +220,7 @@ export default async function CreatorMediaKitPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-3xl border border-[#d9e0eb] bg-white p-8 shadow-[0_8px_30px_rgba(18,34,72,0.06)]">
-          <h2 className="text-2xl font-bold text-[#0f1c3f]">Sponsorship Inventory</h2>
-          <div className="mt-6 flex flex-wrap gap-3">
-            {data.inventoryItems.length > 0 ? (
-              data.inventoryItems.map((item) => (
-                <span
-                  key={item.id}
-                  className="rounded-full border border-[#d9e0eb] bg-white px-4 py-2 text-sm font-medium text-[#0f1c3f]"
-                >
-                  {item.name}
-                </span>
-              ))
-            ) : (
-              <p className="text-sm text-[#66758f]">No inventory items have been added yet.</p>
-            )}
-          </div>
-        </section>
+        
 
         <section className="mt-8 pb-4">
           <h2 className="text-2xl font-bold text-[#0f1c3f]">Sponsorship Packages</h2>

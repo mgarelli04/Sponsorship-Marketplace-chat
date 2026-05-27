@@ -111,6 +111,7 @@ export default function SponsorDiscoverClient({
         ...creator.interests,
         ...creator.audienceTypes,
         ...creator.previousSponsors,
+        ...creator.eventSearchTerms,
       ]
         .filter(Boolean)
         .join(" ")
