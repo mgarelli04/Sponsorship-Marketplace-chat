@@ -158,6 +158,11 @@ export default async function ChatInbox({
       var payload = await response.json();
       if (!payload.ok || !payload.thread || !Array.isArray(payload.thread.messages)) return;
 
+      if (payload.thread.status && payload.thread.status !== "accepted") {
+        window.location.reload();
+        return;
+      }
+
       payload.thread.messages.forEach(function (message) {
         appendMessage(message);
       });
