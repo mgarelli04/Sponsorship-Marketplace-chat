@@ -131,16 +131,58 @@ export default async function ChatInbox({
     } catch {}
   });
 
-  form.addEventListener("submit", function (event) {
+  async function sendWithFetch(body) {
+    var formData = new FormData();
+    formData.append("threadId", threadId);
+    formData.append("body", body);
+
+    var response = await fetch("/api/demo-chat-message-json", {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin"
+    });
+
+    var payload = await response.json();
+    if (payload.ok && payload.message) {
+      appendMessage(payload.message);
+    }
+  }
+
+  async function pollMessages() {
+    try {
+      var response = await fetch("/api/demo-chat-thread?threadId=" + encodeURIComponent(threadId), {
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      var payload = await response.json();
+      if (!payload.ok || !payload.thread || !Array.isArray(payload.thread.messages)) return;
+
+      payload.thread.messages.forEach(function (message) {
+        appendMessage(message);
+      });
+    } catch {}
+  }
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
+
     var body = input.value.trim();
     if (!body) return;
 
+    input.value = "";
+
     if (isOpen && socket.readyState === WebSocket.OPEN) {
-      event.preventDefault();
       socket.send(JSON.stringify({ type: "message", threadId: threadId, body: body }));
-      input.value = "";
+    } else {
+      await sendWithFetch(body);
     }
+
+    setTimeout(pollMessages, 500);
   });
+
+  setInterval(pollMessages, 1500);
+  setTimeout(pollMessages, 500);
 })();
 `
       : "";
