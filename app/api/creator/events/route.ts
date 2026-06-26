@@ -1,6 +1,5 @@
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/src/auth/options";
+import { getCurrentChatUser } from "@/src/chat/session";
 import { ensureCreatorForUser } from "@/src/creator/defaults";
 import {
   buildEventMutationValues,
@@ -13,16 +12,16 @@ import { db } from "@/src/db/db";
 import { events } from "@/src/db/schema";
 
 async function getCreatorSession() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentChatUser().catch(() => null);
 
-  if (!session?.user?.id || !session.user.email || session.user.role !== "creator") {
+  if (!user || user.role !== "creator" || !user.email) {
     return null;
   }
 
   return {
-    userId: session.user.id,
-    email: session.user.email,
-    fullName: session.user.name,
+    userId: user.id,
+    email: user.email,
+    fullName: user.name,
   };
 }
 

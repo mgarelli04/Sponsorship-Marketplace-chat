@@ -1,23 +1,22 @@
 import { eq } from "drizzle-orm";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/src/auth/options";
+import { getCurrentChatUser } from "@/src/chat/session";
 import { ensureCreatorForUser } from "@/src/creator/defaults";
 import { db } from "@/src/db/db";
 import { creators, creatorsMediaKit } from "@/src/db/schema";
 
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentChatUser().catch(() => null);
 
-    if (!session?.user?.id || !session.user.email || session.user.role !== "creator") {
+    if (!user || user.role !== "creator" || !user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const creator = await ensureCreatorForUser({
-      userId: session.user.id,
-      email: session.user.email,
-      fullName: session.user.name,
+      userId: user.id,
+      email: user.email,
+      fullName: user.name,
     });
     const now = new Date();
 

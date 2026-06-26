@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowLeft, DollarSign, Lock, MapPin, Shield, Users, Calendar, CheckCircle2, Heart,
@@ -66,6 +67,7 @@ const BUDGET_OPTIONS = [
 // Simplified: removed detailed demographics visualizations to keep profile focused and verifiable.
 
 export default function CreatorProfileClient({ data }: { data: CreatorProfileData }) {
+  const router = useRouter();
   const { data: session, status } = useSession();
   const savedIds = useSyncExternalStore(subscribeToSaved, readSaved, () => EMPTY_SAVED);
   const isSaved = savedIds.includes(data.creator.id);
@@ -77,6 +79,8 @@ export default function CreatorProfileClient({ data }: { data: CreatorProfileDat
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [chatStarting, setChatStarting] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const toggleSave = () => {
     const next = isSaved
@@ -159,13 +163,34 @@ export default function CreatorProfileClient({ data }: { data: CreatorProfileDat
     }
   };
 
-  if (status === "loading") {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f8fafc]">
-        <p className="text-sm text-[#64748b]">Loading...</p>
-      </main>
-    );
-  }
+  const startChatConnection = async () => {
+    if (status === "unauthenticated") {
+      router.push("/sponsor/login");
+      return;
+    }
+
+    setChatStarting(true);
+    setChatError(null);
+
+    try {
+      const res = await fetch("/api/chat/threads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorId: data.creator.id }),
+      });
+      const body = await res.json();
+
+      if (!res.ok) {
+        throw new Error(body.error || "No se pudo abrir el chat.");
+      }
+
+      router.push(`/sponsor/inbox?thread=${body.thread.id}`);
+    } catch (err) {
+      setChatError(err instanceof Error ? err.message : "No se pudo abrir el chat.");
+    } finally {
+      setChatStarting(false);
+    }
+  };
 
   return (
     <main className="min-h-screen bg-[#f7f9fc] text-[#0f172a]">
@@ -205,26 +230,36 @@ export default function CreatorProfileClient({ data }: { data: CreatorProfileDat
                   {firstPackage && <span>From ${firstPackage.price.toLocaleString()}</span>}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={toggleSave}
-                  className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition ${
-                    isSaved
-                      ? "border-[#f0c27a] bg-[#fff2dd] text-[#f79009]"
-                      : "border-[#d9e2ef] bg-white text-[#64748b] hover:border-[#f0c27a]"
-                  }`}
-                >
-                  <Heart className={`h-4 w-4 ${isSaved ? "fill-[#f79009]" : ""}`} />
-                  {isSaved ? "Saved" : "Save"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openInquiry()}
-                  className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-                >
-                  Sponsor this creator
-                </button>
+              <div className="flex flex-col items-end gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSave}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition ${
+                      isSaved
+                        ? "border-[#f0c27a] bg-[#fff2dd] text-[#f79009]"
+                        : "border-[#d9e2ef] bg-white text-[#64748b] hover:border-[#f0c27a]"
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 ${isSaved ? "fill-[#f79009]" : ""}`} />
+                    {isSaved ? "Saved" : "Save"}
+                  </button>
+                  <Link
+                    href={`/api/demo-open-chat?creatorId=${data.creator.id}`}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[#d9e2ef] bg-white px-4 py-2 text-sm font-bold text-[#0f172a] shadow-sm transition hover:border-[#f79009]"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Open chat
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => openInquiry()}
+                    className="rounded-lg bg-linear-to-r from-[#f79009] to-[#f97316] px-5 py-2 text-sm font-bold text-white shadow-sm transition hover:opacity-90"
+                  >
+                    Sponsor this creator
+                  </button>
+                </div>
+                {chatError && <p className="max-w-sm text-right text-xs text-red-600">{chatError}</p>}
               </div>
             </div>
           </div>

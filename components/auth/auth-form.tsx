@@ -133,7 +133,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
           return;
         }
 
-        router.push(urls.redirect);
+        window.location.href = urls.redirect;
       } else {
         // Login
         const result = await signIn("credentials", {
@@ -157,7 +157,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
           return;
         }
 
-        router.push(urls.redirect);
+        window.location.href = urls.redirect;
       }
     } catch (err) {
       setError(formType === "register" ? "Error al registrarse" : "Error al iniciar sesión");
@@ -257,7 +257,10 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
             {config.subtitle}
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+          <form onSubmit={handleSubmit} method={formType === "login" ? "post" : undefined} action={formType === "login" ? "/api/demo-login" : undefined} className="mt-8 space-y-4">
+            <input type="hidden" name="expectedRole" value={userType} />
+            <input type="hidden" name="role" value={userType} />
+
             {error && (
               <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200">
                 {error}
@@ -274,6 +277,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
                 </label>
                 <input
                   id="fullName"
+                  name="fullName"
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -293,6 +297,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -311,6 +316,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
               </label>
               <input
                 id="password"
+                name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

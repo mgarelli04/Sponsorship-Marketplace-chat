@@ -85,7 +85,7 @@ export async function getSponsorDiscoverData(): Promise<DiscoverData> {
     const { db } = await import("@/src/db/db");
 
     const [creatorRows, categoryRows] = await Promise.all([
-      db.select().from(creators).where(eq(creators.profileStatus, "published")),
+      db.select().from(creators),
       db.select().from(categories).where(eq(categories.isActive, true)).orderBy(asc(categories.name)),
     ]);
 

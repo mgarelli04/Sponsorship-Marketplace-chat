@@ -36,6 +36,7 @@ export default function Home() {
                 Explore creators
                 <span aria-hidden="true">→</span>
               </Link>
+
             </div>
           </div>
         </section>

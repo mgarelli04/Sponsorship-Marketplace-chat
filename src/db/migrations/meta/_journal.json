@@ -8,6 +8,20 @@
       "when": 1777579666748,
       "tag": "0000_woozy_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782213420000,
+      "tag": "0001_chat_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1782230165529,
+      "tag": "0002_huge_ender_wiggin",
+      "breakpoints": true
     }
   ]
 }

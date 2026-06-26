@@ -472,3 +472,59 @@ export const sponsorshipInquiries = pgTable(
 		index('sponsorship_inquiries_event_id_idx').on(table.eventId),
 	],
 );
+
+
+export const chatConnectionStatusEnum = pgEnum('chat_connection_status', ['pending', 'accepted', 'closed']);
+
+export const chatConnections = pgTable(
+	'chat_connections',
+	{
+		id: uuid('id').primaryKey().notNull().defaultRandom(),
+		creatorId: uuid('creator_id')
+			.notNull()
+			.references(() => creators.id, { onDelete: 'cascade' }),
+		sponsorCompanyId: uuid('sponsor_company_id')
+			.notNull()
+			.references(() => sponsorCompanies.id, { onDelete: 'cascade' }),
+		sponsorUserId: uuid('sponsor_user_id')
+			.notNull()
+			.references(() => profiles.id, { onDelete: 'restrict' }),
+		requestedByUserId: uuid('requested_by_user_id')
+			.notNull()
+			.references(() => profiles.id, { onDelete: 'restrict' }),
+		acceptedByUserId: uuid('accepted_by_user_id').references(() => profiles.id, { onDelete: 'set null' }),
+		closedByUserId: uuid('closed_by_user_id').references(() => profiles.id, { onDelete: 'set null' }),
+		status: chatConnectionStatusEnum('status').notNull().default('pending'),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+		acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+		closedAt: timestamp('closed_at', { withTimezone: true }),
+		lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
+	},
+	(table) => [
+		index('chat_connections_creator_id_idx').on(table.creatorId),
+		index('chat_connections_sponsor_company_id_idx').on(table.sponsorCompanyId),
+		index('chat_connections_sponsor_user_id_idx').on(table.sponsorUserId),
+		index('chat_connections_status_idx').on(table.status),
+	],
+);
+
+export const chatMessages = pgTable(
+	'chat_messages',
+	{
+		id: uuid('id').primaryKey().notNull().defaultRandom(),
+		connectionId: uuid('connection_id')
+			.notNull()
+			.references(() => chatConnections.id, { onDelete: 'cascade' }),
+		senderUserId: uuid('sender_user_id')
+			.notNull()
+			.references(() => profiles.id, { onDelete: 'restrict' }),
+		body: text('body').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		index('chat_messages_connection_id_idx').on(table.connectionId),
+		index('chat_messages_created_at_idx').on(table.createdAt),
+	],
+);
+

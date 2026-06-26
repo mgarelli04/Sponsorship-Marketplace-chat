@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 function readHistoryCount() {
@@ -22,6 +22,7 @@ export default function SponsorHeader() {
   const [historyCount, setHistoryCount] = useState(0);
   const isDiscoverRoute = pathname === "/sponsor/discover";
   const isHistoryRoute = pathname === "/sponsor/history";
+  const isInboxRoute = pathname === "/sponsor/inbox";
 
   useEffect(() => {
     const syncCount = () => setHistoryCount(readHistoryCount());
@@ -33,10 +34,6 @@ export default function SponsorHeader() {
       window.removeEventListener("storage", syncCount);
     };
   }, []);
-
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/login" });
-  };
 
   if (pathname === "/sponsor/login" || pathname === "/sponsor/register") return null;
 
@@ -50,7 +47,8 @@ export default function SponsorHeader() {
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-[#66758f] md:flex">
           <Link className={isDiscoverRoute ? "font-semibold text-[#0f1c3f]" : "transition-colors hover:text-[#f79009]"} href="/sponsor/discover">Discover</Link>
-          <Link className={isHistoryRoute ? "font-semibold text-[#0f1c3f]" : "transition-colors hover:text-[#f79009]"} href="/sponsor/history">History</Link>
+          <Link className={isHistoryRoute ? "font-semibold text-[#0f1c3f]" : "transition-colors hover:text-[#f79009]"} href="/sponsor/history">History{historyCount > 0 ? ` (${historyCount})` : ""}</Link>
+          <Link className={isInboxRoute ? "font-semibold text-[#0f1c3f]" : "transition-colors hover:text-[#f79009]"} href="/sponsor/inbox">Inbox</Link>
         </nav>
 
         <div className="flex items-center gap-4">
@@ -58,12 +56,12 @@ export default function SponsorHeader() {
             <p className="text-sm font-semibold text-[#0f1c3f]">{session?.user?.name || "Sponsor"}</p>
             <p className="text-xs text-[#66758f]">Sponsor</p>
           </div>
-          <button
-            onClick={handleSignOut}
+          <Link
+            href="/api/demo-logout"
             className="cursor-pointer rounded-lg bg-[#f79009]/10 px-3 py-1.5 text-sm font-medium text-[#f79009] transition hover:bg-[#f79009]/20"
           >
             Sign Out
-          </button>
+          </Link>
         </div>
       </div>
     </header>

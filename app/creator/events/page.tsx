@@ -1,22 +1,21 @@
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/src/auth/options";
+import { getCurrentChatUser } from "@/src/chat/session";
 import { getCreatorEventsData } from "@/src/creator/events";
 import CreatorEventsClient from "./events-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function CreatorEventsPage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentChatUser().catch(() => null);
 
-  if (!session?.user?.id || session.user.role !== "creator" || !session.user.email) {
+  if (!user || user.role !== "creator" || !user.email) {
     redirect("/creator/login");
   }
 
   const data = await getCreatorEventsData({
-    userId: session.user.id,
-    email: session.user.email,
-    fullName: session.user.name,
+    userId: user.id,
+    email: user.email,
+    fullName: user.name,
   });
 
   return (

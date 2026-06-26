@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/src/auth/options";
+import { getCurrentChatUser } from "@/src/chat/session";
 import { getCreatorDashboardData } from "@/src/creator/data";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
@@ -32,16 +31,16 @@ function statusLabel(status: string) {
 }
 
 export default async function CreatorDashboard() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentChatUser().catch(() => null);
 
-  if (!session?.user?.id || session.user.role !== "creator" || !session.user.email) {
+  if (!user || user.role !== "creator" || !user.email) {
     redirect("/creator/login");
   }
 
   const data = await getCreatorDashboardData({
-    userId: session.user.id,
-    email: session.user.email,
-    fullName: session.user.name,
+    userId: user.id,
+    email: user.email,
+    fullName: user.name,
   });
 
   return (

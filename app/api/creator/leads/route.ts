@@ -1,13 +1,12 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/src/auth/options";
 import { NextResponse } from "next/server";
+import { getCurrentChatUser } from "@/src/chat/session";
 import { desc, eq } from "drizzle-orm";
 import { creators, packages, sponsorCompanies, sponsorshipInquiries } from "@/src/db/schema";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id || session.user.role !== "creator") {
+    const user = await getCurrentChatUser().catch(() => null);
+    if (!user || user.role !== "creator") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -16,7 +15,7 @@ export async function GET() {
     const [creatorRow] = await db
       .select()
       .from(creators)
-      .where(eq(creators.createdByUserId, session.user.id))
+      .where(eq(creators.createdByUserId, user.id))
       .limit(1);
 
     if (!creatorRow) {

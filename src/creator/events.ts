@@ -294,10 +294,10 @@ export async function touchCreatorEventContent(creatorId: string) {
   const now = new Date();
 
   await Promise.all([
-    db.update(creators).set({ updatedAt: now }).where(eq(creators.id, creatorId)),
+    db.update(creators).set({ updatedAt: now, profileStatus: "published" }).where(eq(creators.id, creatorId)),
     db
       .update(creatorsMediaKit)
-      .set({ updatedAt: now, lastContentUpdateAt: now })
+      .set({ updatedAt: now, lastContentUpdateAt: now, isPublic: true, publishedAt: now })
       .where(eq(creatorsMediaKit.creatorId, creatorId)),
   ]);
 }

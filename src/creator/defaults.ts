@@ -72,7 +72,7 @@ export async function ensureCreatorForUser(input: CreatorUserInput) {
         latitude: null,
         longitude: null,
         onboardingStatus: "in_progress",
-        profileStatus: "draft",
+        profileStatus: "published",
         verificationStatus: "unverified",
         responseTimeHours: null,
         createdByUserId: input.userId,
@@ -92,8 +92,8 @@ export async function ensureCreatorForUser(input: CreatorUserInput) {
         "Partners will see the available sponsorship inventory, packages, and audience data here.",
       audienceSummaryText:
         "Audience data will appear after events, snapshots, or integrations are added.",
-      isPublic: false,
-      publishedAt: null,
+      isPublic: true,
+      publishedAt: new Date(),
       lastContentUpdateAt: new Date(),
     });
 

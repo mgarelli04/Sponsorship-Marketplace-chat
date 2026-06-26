@@ -129,7 +129,7 @@ const creatorRows = creatorNames.map((name, index) => {
 		latitude: city[4],
 		longitude: city[5],
 		onboardingStatus: 'completed' as const,
-		profileStatus: index % 10 === 0 ? ('draft' as const) : ('published' as const),
+		profileStatus: 'published' as const,
 		verificationStatus: index % 6 === 0 ? ('pending' as const) : ('verified' as const),
 		responseTimeHours: 6 + (index % 5) * 3,
 		createdByUserId: uuid(10, index + 1),
@@ -480,8 +480,8 @@ const mediaKitRows = creatorRows.map((creator, index) => ({
 	missionText: 'Build useful spaces where brands can create value instead of interrupting the audience.',
 	whyPartnerText: 'Partners receive measurable visibility, qualified interactions and post-event performance summaries.',
 	audienceSummaryText: `Typical audience size ranges from ${900 + index * 120} to ${2200 + index * 180} attendees per event.`,
-	isPublic: creator.profileStatus === 'published',
-	publishedAt: creator.profileStatus === 'published' ? now : null,
+	isPublic: true,
+	publishedAt: now,
 	lastContentUpdateAt: now,
 	createdAt: now,
 	updatedAt: now,
@@ -683,10 +683,12 @@ async function seed() {
 		await tx.insert(categories).values(categorySeed).onConflictDoNothing();
 		await tx.insert(interests).values(interestSeed).onConflictDoNothing();
 		await tx.insert(creators).values(creatorRowsForInsert).onConflictDoNothing();
+		await tx.update(creators).set({ profileStatus: 'published' });
 		await tx.insert(sponsorCompanies).values(sponsorRowsForInsert).onConflictDoNothing();
 		await tx.insert(creatorCategories).values(creatorCategoryRows).onConflictDoNothing();
 		await tx.insert(creatorInterests).values(creatorInterestRows).onConflictDoNothing();
 		await tx.insert(creatorsMediaKit).values(mediaKitRows).onConflictDoNothing();
+		await tx.update(creatorsMediaKit).set({ isPublic: true, publishedAt: now });
 		await tx.insert(creatorsAssets).values(assetRows).onConflictDoNothing();
 		await tx.insert(events).values(eventRows).onConflictDoNothing();
 		await tx.insert(audienceSnapshots).values(audienceSnapshotRows).onConflictDoNothing();
