@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, fullName, userType } = await request.json();
 
-    // Validaciones
+    // para validaciones
     if (!email || !password || !fullName || !userType) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear usuario en Supabase Auth
+    // crea el  usuario en supabase
     const { data: authData, error: authError } = await supabase.auth.admin
       .createUser({
         email,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear perfil en la base de datos y los datos base de creator si aplica.
+    //crea perfil en la base de datos y los datos base de creator
     try {
       await db.insert(profiles).values({
         id: authData.user.id,
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (dbError) {
       console.error("Profile bootstrap error:", dbError);
-      // Si falla la creación del perfil, eliminar el usuario de auth
+      // si falla la creación del perfil eliminar el usuario
       await supabase.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
         { error: "Error creating user profile" },

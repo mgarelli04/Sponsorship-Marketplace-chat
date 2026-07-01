@@ -29,7 +29,6 @@ function writeSavedCreators(ids: string[]) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
     window.dispatchEvent(new Event("sponsor-saved-updated"));
   } catch {
-    // Storage may be unavailable in private browsing contexts.
   }
 }
 

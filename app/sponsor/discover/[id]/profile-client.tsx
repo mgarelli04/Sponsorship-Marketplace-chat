@@ -64,8 +64,6 @@ const BUDGET_OPTIONS = [
   { value: "100000+", label: "$100K+", min: "100000", max: "" },
 ] as const;
 
-// Simplified: removed detailed demographics visualizations to keep profile focused and verifiable.
-
 export default function CreatorProfileClient({ data }: { data: CreatorProfileData }) {
   const router = useRouter();
   const { data: session, status } = useSession();

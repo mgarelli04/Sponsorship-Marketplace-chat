@@ -91,7 +91,6 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
 
     try {
       if (formType === "register") {
-        // Llamar endpoint de registro
         const response = await fetch("/api/auth/register", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -111,7 +110,6 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
           return;
         }
 
-        // Auto-login después del registro
         const result = await signIn("credentials", {
           email,
           password,
@@ -181,9 +179,9 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
 
         <div className="relative z-10 flex min-h-[30vh] flex-col justify-between md:min-h-[calc(100vh-7rem)]">
           <div>
-            <Link 
-              className="inline-flex items-center gap-3" 
-              href="/" 
+            <Link
+              className="inline-flex items-center gap-3"
+              href="/"
               aria-label="SponsorHub home"
             >
               <span className="grid h-8 w-8 place-items-center rounded-full bg-[#f79009] text-sm font-bold lowercase text-white">
@@ -243,13 +241,13 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
 
       <section className="grid place-items-center px-6 py-12 md:px-10 md:py-16">
         <div className="w-full max-w-lg">
-          <Link 
-            href={config.backLink} 
+          <Link
+            href={config.backLink}
             className="inline-flex items-center gap-2 text-sm text-[#6b7e9e] hover:text-[#0f1c3f] mb-6 transition"
           >
             <span>←</span> {userType === "creator" ? "Atrás" : "Back"}
           </Link>
-          
+
           <h2 className="text-2xl font-bold tracking-tight text-[#0f1c3f] md:text-3xl">
             {config.titleAlt}
           </h2>
@@ -269,8 +267,8 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
 
             {formType === "register" && (
               <div>
-                <label 
-                  htmlFor="fullName" 
+                <label
+                  htmlFor="fullName"
                   className="block text-sm font-medium text-[#0f1c3f] mb-2"
                 >
                   {userType === "creator" ? "Nombre completo" : "Full Name"}
@@ -289,8 +287,8 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
             )}
 
             <div>
-              <label 
-                htmlFor="email" 
+              <label
+                htmlFor="email"
                 className="block text-sm font-medium text-[#0f1c3f] mb-2"
               >
                 Email
@@ -308,8 +306,8 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
             </div>
 
             <div>
-              <label 
-                htmlFor="password" 
+              <label
+                htmlFor="password"
                 className="block text-sm font-medium text-[#0f1c3f] mb-2"
               >
                 {userType === "creator" ? "Contraseña" : "Password"}
@@ -343,7 +341,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
               {formType === "login" ? (
                 <>
                   {config.noAccount}{" "}
-                  <Link 
+                  <Link
                     href={toggleLink}
                     className="font-semibold text-[#07163c] hover:text-[#0c1e4a] transition"
                   >
@@ -353,7 +351,7 @@ export default function AuthForm({ userType, formType }: AuthFormProps) {
               ) : (
                 <>
                   {config.hasAccount}{" "}
-                  <Link 
+                  <Link
                     href={toggleLink}
                     className="font-semibold text-[#07163c] hover:text-[#0c1e4a] transition"
                   >
