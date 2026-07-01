@@ -52,6 +52,44 @@ export default async function ChatInbox({
     ? await getChatThreadForUser(selectedId, user).catch(() => null)
     : null;
 
+  const initialThreadsSignature = threads
+    .map((thread) =>
+      [
+        thread.id,
+        thread.status,
+        thread.lastMessageAt ? new Date(thread.lastMessageAt).toISOString() : "",
+        thread.lastMessage?.id ?? "",
+      ].join(":"),
+    )
+    .join("|");
+
+
+  const inboxPollingScript = `
+(function () {
+  var initialSignature = ${JSON.stringify("__INITIAL_SIGNATURE__")};
+  initialSignature = initialSignature.replace("__INITIAL_SIGNATURE__", ${JSON.stringify("__SIGNATURE_VALUE__")});
+
+  async function checkInboxChanges() {
+    try {
+      var response = await fetch("/api/demo-chat-threads", {
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      var payload = await response.json();
+
+      if (!payload.ok) return;
+
+      if (payload.signature !== initialSignature) {
+        window.location.reload();
+      }
+    } catch {}
+  }
+
+  setInterval(checkInboxChanges, 2000);
+})();
+  `;
+
   const wsScript =
     selectedThread?.status === "accepted"
       ? `
@@ -357,6 +395,7 @@ export default async function ChatInbox({
                   )}
                 </div>
 
+                <script dangerouslySetInnerHTML={{ __html: inboxPollingScript }} />
                 {wsScript && <script dangerouslySetInnerHTML={{ __html: wsScript }} />}
               </>
             )}
