@@ -53,16 +53,7 @@ export default async function ChatInbox({
     : null;
 
   const initialThreadsSignature = threads
-    .map((thread) =>
-      [
-        thread.id,
-        thread.status,
-        thread.lastMessageAt ? new Date(thread.lastMessageAt).toISOString() : "",
-        thread.lastMessage?.body ?? "",
-        thread.lastMessage?.senderUserId ?? "",
-        thread.lastMessage?.createdAt ? new Date(thread.lastMessage.createdAt).toISOString() : "",
-      ].join(":"),
-    )
+    .map((thread) => [thread.id, thread.status].join(":"))
     .join("|");
 
 
@@ -82,7 +73,10 @@ export default async function ChatInbox({
 
       if (!payload.ok) return;
 
-      if (payload.signature !== initialSignature) {
+      var input = document.getElementById("chat-message-body");
+      var userIsTyping = input && document.activeElement === input && input.value.trim().length > 0;
+
+      if (payload.signature !== initialSignature && !userIsTyping) {
         window.location.reload();
       }
     } catch {}

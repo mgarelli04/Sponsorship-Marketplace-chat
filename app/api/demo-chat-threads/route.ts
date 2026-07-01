@@ -8,14 +8,7 @@ export async function GET() {
     const threads = await listChatThreads(user);
 
     const signature = threads
-      .map((thread) => [
-        thread.id,
-        thread.status,
-        thread.lastMessageAt ? new Date(thread.lastMessageAt).toISOString() : "",
-        thread.lastMessage?.body ?? "",
-        thread.lastMessage?.senderUserId ?? "",
-        thread.lastMessage?.createdAt ? new Date(thread.lastMessage.createdAt).toISOString() : "",
-      ].join(":"))
+      .map((thread) => [thread.id, thread.status].join(":"))
       .join("|");
 
     return NextResponse.json({
