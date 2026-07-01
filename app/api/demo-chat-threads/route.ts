@@ -12,7 +12,9 @@ export async function GET() {
         thread.id,
         thread.status,
         thread.lastMessageAt ? new Date(thread.lastMessageAt).toISOString() : "",
-        thread.lastMessage?.id ?? "",
+        thread.lastMessage?.body ?? "",
+        thread.lastMessage?.senderUserId ?? "",
+        thread.lastMessage?.createdAt ? new Date(thread.lastMessage.createdAt).toISOString() : "",
       ].join(":"))
       .join("|");
 
