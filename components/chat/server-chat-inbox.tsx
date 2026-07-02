@@ -211,9 +211,7 @@ export default async function ServerChatInbox({
                         {selectedThread.acceptedAt ? ` · aceptada ${formatDate(selectedThread.acceptedAt)}` : ""}
                       </p>
                       {selectedThread.status === "accepted" && (
-                        <p id="ws-status" className="mt-1 text-xs text-emerald-600">
-                          Conectando WebSocket...
-                        </p>
+                        <p id="ws-status" className="hidden" aria-hidden="true" />
                       )}
                     </div>
 
